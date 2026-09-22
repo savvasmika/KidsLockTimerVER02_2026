@@ -230,6 +230,10 @@ fun KidLockNavApp(
         composable(NavRoutes.CHILD_SETUP) {
             ChildSetupScreen(
                 initialName = childName,
+                updateState = updateState,
+                onCheckForUpdates = { owner, repo -> viewModel.checkForAppUpdates(owner, repo) },
+                onDownloadUpdate = { url -> viewModel.openUpdateUrl(url) },
+                onBack = { navController.popBackStack() },
                 onComplete = { name, age, avatar ->
                     viewModel.setChildName(name)
                     viewModel.selectDeviceRole(DeviceRole.CHILD)

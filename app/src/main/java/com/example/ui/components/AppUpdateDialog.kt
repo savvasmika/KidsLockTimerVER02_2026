@@ -63,8 +63,8 @@ fun AppUpdateDialog(
     onDownloadUpdate: (url: String) -> Unit,
     onDismiss: () -> Unit
 ) {
-    var repoOwner by remember { mutableStateOf("dimitrislampro1986") }
-    var repoName by remember { mutableStateOf("kidlock") }
+    var repoOwner by remember { mutableStateOf("savvasmika") }
+    var repoName by remember { mutableStateOf("KidsLockTimerVER02_2026") }
     var showAdvancedSettings by remember { mutableStateOf(false) }
 
     AlertDialog(

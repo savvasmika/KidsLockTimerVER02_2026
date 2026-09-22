@@ -53,7 +53,7 @@ class KidLockViewModel(application: Application) : AndroidViewModel(application)
     // GitHub Updates
     val updateState = app.gitHubUpdateManager.updateState
 
-    fun checkForAppUpdates(owner: String = "dimitrislampro1986", repo: String = "kidlock") {
+    fun checkForAppUpdates(owner: String = "savvasmika", repo: String = "KidsLockTimerVER02_2026") {
         viewModelScope.launch {
             app.gitHubUpdateManager.checkForUpdates(owner, repo)
         }

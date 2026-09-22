@@ -32,8 +32,8 @@ sealed class UpdateCheckState {
 
 class GitHubUpdateManager(
     private val context: Context,
-    private val defaultRepoOwner: String = "dimitrislampro1986",
-    private val defaultRepoName: String = "kidlock"
+    private val defaultRepoOwner: String = "savvasmika",
+    private val defaultRepoName: String = "KidsLockTimerVER02_2026"
 ) {
     companion object {
         private const val TAG = "GitHubUpdateManager"

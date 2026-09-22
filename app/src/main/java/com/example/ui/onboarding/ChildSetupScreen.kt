@@ -13,15 +13,22 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -39,17 +46,25 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
+import com.example.network.UpdateCheckState
+import com.example.ui.components.AppUpdateDialog
+import com.example.ui.theme.EmeraldSuccess
 import com.example.ui.theme.IndigoPrimary
 
 @Composable
 fun ChildSetupScreen(
     initialName: String,
+    updateState: UpdateCheckState = UpdateCheckState.Idle,
+    onCheckForUpdates: (owner: String, repo: String) -> Unit = { _, _ -> },
+    onDownloadUpdate: (url: String) -> Unit = {},
+    onBack: () -> Unit = {},
     onComplete: (name: String, age: String, avatar: String) -> Unit
 ) {
     var name by remember { mutableStateOf(if (initialName.contains("Tablet")) "Giorgos" else initialName) }
     var selectedAge by remember { mutableStateOf("6-10") }
     val avatars = listOf("🚀", "👾", "🦖", "🐼", "🏎️", "⚽", "🦄", "🐬", "🤖", "🦁")
     var selectedAvatar by remember { mutableStateOf("🚀") }
+    var showUpdateDialog by remember { mutableStateOf(false) }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -72,6 +87,43 @@ fun ChildSetupScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
+                    // Top Bar with Back and App Update Button
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        IconButton(
+                            onClick = onBack,
+                            modifier = Modifier.testTag("btn_back_child_setup")
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back"
+                            )
+                        }
+
+                        OutlinedButton(
+                            onClick = { showUpdateDialog = true },
+                            shape = RoundedCornerShape(20.dp),
+                            contentPadding = ButtonDefaults.ButtonWithIconContentPadding,
+                            modifier = Modifier.testTag("btn_child_setup_app_update")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.SystemUpdate,
+                                contentDescription = null,
+                                tint = if (updateState is UpdateCheckState.UpdateAvailable) EmeraldSuccess else MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = stringResource(R.string.app_update_title),
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
+
                     Spacer(modifier = Modifier.height(16.dp))
 
                     Text(
@@ -198,6 +250,15 @@ fun ChildSetupScreen(
                 }
             }
         }
+    }
+
+    if (showUpdateDialog) {
+        AppUpdateDialog(
+            updateState = updateState,
+            onCheckForUpdates = onCheckForUpdates,
+            onDownloadUpdate = onDownloadUpdate,
+            onDismiss = { showUpdateDialog = false }
+        )
     }
 }
 

@@ -81,8 +81,8 @@ fun ParentDeviceSettingsScreen(
     var deviceName by remember { mutableStateOf(device.name) }
     var timeoutMinutes by remember { mutableFloatStateOf(device.inactivityTimeoutMinutes.toFloat()) }
     var showUnpairConfirm by remember { mutableStateOf(false) }
-    var repoOwner by remember { mutableStateOf("dimitrislampro1986") }
-    var repoName by remember { mutableStateOf("kidlock") }
+    var repoOwner by remember { mutableStateOf("savvasmika") }
+    var repoName by remember { mutableStateOf("KidsLockTimerVER02_2026") }
     var showCustomRepo by remember { mutableStateOf(false) }
 
     Scaffold(
