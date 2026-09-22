@@ -62,12 +62,30 @@ import com.example.ui.parent.ParentPinDialog
 import com.example.ui.theme.EmeraldSuccess
 import com.example.ui.theme.RoseDanger
 
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.runtime.DisposableEffect
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import java.util.Locale
+
+private fun Context.findActivity(): Activity? {
+    var ctx = this
+    while (ctx is ContextWrapper) {
+        if (ctx is Activity) {
+            return ctx
+        }
+        ctx = ctx.baseContext
+    }
+    return null
+}
 
 @Composable
 fun ChildUnlockedScreen(
@@ -199,13 +217,32 @@ fun ChildUnlockedScreen(
                 textAlign = TextAlign.Center
             )
 
-            // Check Display Over Other Apps permission
+            // Check Display Over Other Apps permission reactively on ON_RESUME
             val localCtx = LocalContext.current
-            val hasOverlayPermission = remember(localCtx) {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    Settings.canDrawOverlays(localCtx)
-                } else {
-                    true
+            val lifecycleOwner = LocalLifecycleOwner.current
+            var hasOverlayPermission by remember {
+                mutableStateOf(
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                        Settings.canDrawOverlays(localCtx)
+                    } else {
+                        true
+                    }
+                )
+            }
+
+            DisposableEffect(lifecycleOwner) {
+                val observer = LifecycleEventObserver { _, event ->
+                    if (event == Lifecycle.Event.ON_RESUME) {
+                        hasOverlayPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                            Settings.canDrawOverlays(localCtx)
+                        } else {
+                            true
+                        }
+                    }
+                }
+                lifecycleOwner.lifecycle.addObserver(observer)
+                onDispose {
+                    lifecycleOwner.lifecycle.removeObserver(observer)
                 }
             }
 
@@ -238,15 +275,29 @@ fun ChildUnlockedScreen(
                         Spacer(modifier = Modifier.height(12.dp))
                         Button(
                             onClick = {
+                                val intent = Intent(
+                                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                                    Uri.parse("package:${localCtx.packageName}")
+                                ).apply {
+                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                }
+
+                                val activity = localCtx.findActivity()
                                 try {
-                                    val intent = Intent(
-                                        Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                                        Uri.parse("package:${localCtx.packageName}")
-                                    )
-                                    localCtx.startActivity(intent)
+                                    if (activity != null) {
+                                        activity.startActivity(intent)
+                                    } else {
+                                        localCtx.startActivity(intent)
+                                    }
                                 } catch (e: Exception) {
-                                    val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION)
-                                    localCtx.startActivity(intent)
+                                    val fallbackIntent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION).apply {
+                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    }
+                                    if (activity != null) {
+                                        activity.startActivity(fallbackIntent)
+                                    } else {
+                                        localCtx.startActivity(fallbackIntent)
+                                    }
                                 }
                             },
                             colors = ButtonDefaults.buttonColors(
