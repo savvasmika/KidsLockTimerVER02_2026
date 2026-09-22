@@ -50,6 +50,21 @@ class KidLockDeviceService : Service() {
             }
             lastForegroundCallTime = now
 
+            try {
+                // Wake screen if sleeping
+                val powerManager = context.getSystemService(Context.POWER_SERVICE) as? android.os.PowerManager
+                @Suppress("DEPRECATION")
+                val wakeLock = powerManager?.newWakeLock(
+                    android.os.PowerManager.SCREEN_BRIGHT_WAKE_LOCK or
+                    android.os.PowerManager.ACQUIRE_CAUSES_WAKEUP or
+                    android.os.PowerManager.ON_AFTER_RELEASE,
+                    "KidLock:RemoteLockWakeLock"
+                )
+                wakeLock?.acquire(3000)
+            } catch (e: Exception) {
+                Log.w(TAG, "WakeLock acquire error: ${e.message}")
+            }
+
             val intent = Intent(context, MainActivity::class.java).apply {
                 addFlags(
                     Intent.FLAG_ACTIVITY_NEW_TASK or

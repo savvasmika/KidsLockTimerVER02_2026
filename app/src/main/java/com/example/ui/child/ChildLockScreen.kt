@@ -1,5 +1,6 @@
 package com.example.ui.child
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
@@ -86,9 +87,13 @@ fun ChildLockScreen(
     onCheckForUpdates: (String, String) -> Unit = { _, _ -> },
     onDownloadUpdate: (String) -> Unit = {}
 ) {
+    // Intercept and prevent back navigation when tablet is locked
+    BackHandler(enabled = true) {
+        // Tablet is strictly locked until parent unlocks or enters PIN
+    }
+
     var showCodeDialog by remember { mutableStateOf(false) }
     var showParentPinDialog by remember { mutableStateOf(false) }
-    var showUpdateDialog by remember { mutableStateOf(false) }
     var requestSentBanner by remember { mutableStateOf(false) }
 
     // Mascot bouncing animation
@@ -110,7 +115,7 @@ fun ChildLockScreen(
             animationsEnabled = animationsEnabled
         )
 
-        // Top Actions Bar (Parent PIN & Theme switcher)
+        // Top Status & Parent Unlock Bar (Strict Lock: No settings or themes accessible)
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -118,21 +123,25 @@ fun ChildLockScreen(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Theme button
+            // Lock Status Badge
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(20.dp))
-                    .background(Color.Black.copy(alpha = 0.35f))
-                    .clickable { onOpenThemeGallery() }
+                    .background(RoseDanger.copy(alpha = 0.25f))
+                    .border(1.dp, RoseDanger.copy(alpha = 0.5f), RoundedCornerShape(20.dp))
                     .padding(horizontal = 14.dp, vertical = 8.dp)
-                    .testTag("btn_lock_theme_picker"),
-                contentAlignment = Alignment.Center
+                    .testTag("badge_tablet_locked")
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(text = theme.emoji, fontSize = 16.sp)
+                    Box(
+                        modifier = Modifier
+                            .size(8.dp)
+                            .clip(CircleShape)
+                            .background(RoseDanger)
+                    )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = stringResource(theme.nameRes),
+                        text = "🔒 " + stringResource(R.string.status_locked),
                         color = Color.White,
                         fontWeight = FontWeight.Bold,
                         fontSize = 13.sp
@@ -140,52 +149,20 @@ fun ChildLockScreen(
                 }
             }
 
-            // Right icons: Update, Pair settings & Parent PIN
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                IconButton(
-                    onClick = { showUpdateDialog = true },
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(CircleShape)
-                        .background(Color.Black.copy(alpha = 0.35f))
-                        .testTag("btn_child_lock_update")
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.SystemUpdate,
-                        contentDescription = "Update App",
-                        tint = if (updateState is UpdateCheckState.UpdateAvailable) EmeraldSuccess else Color.White
-                    )
-                }
-
-                IconButton(
-                    onClick = onOpenPairing,
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(CircleShape)
-                        .background(Color.Black.copy(alpha = 0.35f))
-                        .testTag("btn_child_pairing_settings")
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Settings,
-                        contentDescription = "Pairing",
-                        tint = Color.White
-                    )
-                }
-
-                IconButton(
-                    onClick = { showParentPinDialog = true },
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(CircleShape)
-                        .background(Color.Black.copy(alpha = 0.35f))
-                        .testTag("btn_parent_unlock_pin")
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Lock,
-                        contentDescription = "Parent Unlock",
-                        tint = Color.White
-                    )
-                }
+            // Discreet Parent PIN Unlock Button (Only parent can unlock directly on device)
+            IconButton(
+                onClick = { showParentPinDialog = true },
+                modifier = Modifier
+                    .size(42.dp)
+                    .clip(CircleShape)
+                    .background(Color.Black.copy(alpha = 0.4f))
+                    .testTag("btn_parent_unlock_pin")
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Lock,
+                    contentDescription = "Parent Unlock PIN",
+                    tint = Color.White
+                )
             }
         }
 
@@ -199,14 +176,14 @@ fun ChildLockScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // Bouncing Mascot
+            // Mascot with Locked Border
             Box(
                 modifier = Modifier
                     .size(130.dp)
                     .scale(if (animationsEnabled) bounceScale else 1f)
                     .clip(CircleShape)
                     .background(theme.primaryColor.copy(alpha = 0.3f))
-                    .border(3.dp, theme.accentColor, CircleShape),
+                    .border(3.dp, RoseDanger, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
@@ -220,7 +197,7 @@ fun ChildLockScreen(
             // Main Message Card
             Card(
                 colors = CardDefaults.cardColors(
-                    containerColor = theme.surfaceColor.copy(alpha = 0.85f)
+                    containerColor = theme.surfaceColor.copy(alpha = 0.88f)
                 ),
                 shape = RoundedCornerShape(24.dp),
                 modifier = Modifier.fillMaxWidth()
@@ -273,7 +250,7 @@ fun ChildLockScreen(
 
             Spacer(modifier = Modifier.height(28.dp))
 
-            // Child Action Buttons
+            // Child Action Buttons (Request time or enter parent-provided temporary code)
             Column(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
@@ -301,7 +278,7 @@ fun ChildLockScreen(
                     )
                 }
 
-                // Enter 6-digit code button
+                // Enter 6-digit temporary unlock code button
                 Button(
                     onClick = { showCodeDialog = true },
                     modifier = Modifier
@@ -348,15 +325,6 @@ fun ChildLockScreen(
                 onParentPinUnlockSuccess()
             },
             onDismiss = { showParentPinDialog = false }
-        )
-    }
-
-    if (showUpdateDialog) {
-        AppUpdateDialog(
-            updateState = updateState,
-            onCheckForUpdates = onCheckForUpdates,
-            onDownloadUpdate = onDownloadUpdate,
-            onDismiss = { showUpdateDialog = false }
         )
     }
 }

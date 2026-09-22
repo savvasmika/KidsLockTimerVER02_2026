@@ -67,6 +67,17 @@ class MainActivity : ComponentActivity() {
             val activeTheme by viewModel.activeTheme.collectAsState()
             val isChildLocked by viewModel.isChildLocked.collectAsState()
 
+            // Manage Kiosk / Immersive Mode based on Child Lock State
+            LaunchedEffect(deviceRole, isChildLocked) {
+                if (deviceRole == DeviceRole.CHILD) {
+                    if (isChildLocked) {
+                        kioskManager.startKioskMode(this@MainActivity)
+                    } else {
+                        kioskManager.stopKioskMode(this@MainActivity)
+                    }
+                }
+            }
+
             // Update Configuration Locale dynamically
             val context = LocalContext.current
             val localizedContext = remember(currentLanguage) {
@@ -88,6 +99,13 @@ class MainActivity : ComponentActivity() {
                     )
                 }
             }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (viewModel.deviceRole.value == DeviceRole.CHILD && viewModel.isChildLocked.value) {
+            kioskManager.applyImmersiveMode(this)
         }
     }
 
