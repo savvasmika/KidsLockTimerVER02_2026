@@ -234,29 +234,43 @@ fun AppUpdateDialog(
                             colors = CardDefaults.cardColors(containerColor = RoseDanger.copy(alpha = 0.1f)),
                             shape = RoundedCornerShape(12.dp)
                         ) {
-                            Row(
-                                modifier = Modifier.padding(14.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.ErrorOutline,
-                                    contentDescription = null,
-                                    tint = RoseDanger,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                                Spacer(modifier = Modifier.width(10.dp))
-                                Column {
-                                    Text(
-                                        text = stringResource(R.string.update_check_failed),
-                                        fontWeight = FontWeight.Bold,
-                                        color = RoseDanger,
-                                        style = MaterialTheme.typography.bodyMedium
+                            Column(modifier = Modifier.padding(14.dp)) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.ErrorOutline,
+                                        contentDescription = null,
+                                        tint = RoseDanger,
+                                        modifier = Modifier.size(24.dp)
                                     )
-                                    Text(
-                                        text = updateState.message,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Column {
+                                        Text(
+                                            text = stringResource(R.string.update_check_failed),
+                                            fontWeight = FontWeight.Bold,
+                                            color = RoseDanger,
+                                            style = MaterialTheme.typography.bodyMedium
+                                        )
+                                        Text(
+                                            text = updateState.message,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+
+                                if (updateState.fallbackUrl != null) {
+                                    Spacer(modifier = Modifier.height(10.dp))
+                                    OutlinedButton(
+                                        onClick = { onDownloadUpdate(updateState.fallbackUrl) },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        shape = RoundedCornerShape(8.dp)
+                                    ) {
+                                        Icon(Icons.Default.OpenInBrowser, contentDescription = null, modifier = Modifier.size(18.dp))
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text("Open GitHub Releases in Browser")
+                                    }
                                 }
                             }
                         }

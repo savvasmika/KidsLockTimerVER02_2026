@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.EscalatorWarning
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.SmartDisplay
+import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -58,6 +59,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
 import com.example.model.DeviceRole
+import com.example.network.UpdateCheckState
+import com.example.ui.components.AppUpdateDialog
+import com.example.ui.theme.EmeraldSuccess
 import com.example.ui.theme.IndigoPrimary
 import com.example.ui.theme.PastelBlue
 import com.example.ui.theme.PastelPink
@@ -65,11 +69,15 @@ import com.example.ui.theme.PastelPink
 @Composable
 fun RoleSelectionScreen(
     currentLanguage: String,
+    updateState: UpdateCheckState = UpdateCheckState.Idle,
     onLanguageChange: (String) -> Unit,
+    onCheckForUpdates: (String, String) -> Unit = { _, _ -> },
+    onDownloadUpdate: (String) -> Unit = {},
     onRoleSelected: (DeviceRole) -> Unit
 ) {
     var selectedRole by remember { mutableStateOf<DeviceRole?>(null) }
     var showLanguageDialog by remember { mutableStateOf(false) }
+    var showUpdateDialog by remember { mutableStateOf(false) }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -88,11 +96,32 @@ fun RoleSelectionScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
-                // Top Bar with Language Selector
+                // Top Bar with Language and App Update
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
+                    OutlinedButton(
+                        onClick = { showUpdateDialog = true },
+                        shape = RoundedCornerShape(20.dp),
+                        contentPadding = ButtonDefaults.ButtonWithIconContentPadding,
+                        modifier = Modifier.testTag("btn_role_app_update")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.SystemUpdate,
+                            contentDescription = null,
+                            tint = if (updateState is UpdateCheckState.UpdateAvailable) EmeraldSuccess else MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = stringResource(R.string.app_update_title),
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+
                     OutlinedButton(
                         onClick = { showLanguageDialog = true },
                         shape = RoundedCornerShape(20.dp),
@@ -235,6 +264,15 @@ fun RoleSelectionScreen(
                 showLanguageDialog = false
             },
             onDismiss = { showLanguageDialog = false }
+        )
+    }
+
+    if (showUpdateDialog) {
+        AppUpdateDialog(
+            updateState = updateState,
+            onCheckForUpdates = onCheckForUpdates,
+            onDownloadUpdate = onDownloadUpdate,
+            onDismiss = { showUpdateDialog = false }
         )
     }
 }

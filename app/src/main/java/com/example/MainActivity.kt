@@ -192,7 +192,10 @@ fun KidLockNavApp(
         composable(NavRoutes.ROLE_SELECTION) {
             RoleSelectionScreen(
                 currentLanguage = currentLanguage,
+                updateState = updateState,
                 onLanguageChange = { lang -> viewModel.setLanguage(lang) },
+                onCheckForUpdates = { owner, repo -> viewModel.checkForAppUpdates(owner, repo) },
+                onDownloadUpdate = { url -> viewModel.openUpdateUrl(url) },
                 onRoleSelected = { role ->
                     if (role == DeviceRole.PARENT) {
                         if (!viewModel.hasParentPin()) {
@@ -291,6 +294,7 @@ fun KidLockNavApp(
             ChildPairingScreen(
                 childName = childName,
                 incomingPairRequest = incomingPairRequest,
+                updateState = updateState,
                 onAcceptPairing = { req ->
                     viewModel.acceptPairingRequest(req)
                     navController.navigate(NavRoutes.CHILD_LOCK) {
@@ -303,6 +307,8 @@ fun KidLockNavApp(
                         popUpTo(NavRoutes.CHILD_PAIRING) { inclusive = true }
                     }
                 },
+                onCheckForUpdates = { owner, repo -> viewModel.checkForAppUpdates(owner, repo) },
+                onDownloadUpdate = { url -> viewModel.openUpdateUrl(url) },
                 onBack = { navController.popBackStack() }
             )
         }
@@ -319,6 +325,7 @@ fun KidLockNavApp(
                 theme = activeTheme,
                 animationsEnabled = animationsEnabled,
                 statusMessage = unlockStatusMessage,
+                updateState = updateState,
                 onRequestUnlock = { mins -> viewModel.requestUnlockFromParent(mins) },
                 onSubmitUnlockCode = { code, onResult -> viewModel.submitUnlockCode(code, onResult) },
                 onVerifyParentPin = { pin -> viewModel.verifyPin(pin) },
@@ -329,7 +336,9 @@ fun KidLockNavApp(
                     }
                 },
                 onOpenThemeGallery = { navController.navigate(NavRoutes.THEME_GALLERY) },
-                onOpenPairing = { navController.navigate(NavRoutes.CHILD_PAIRING) }
+                onOpenPairing = { navController.navigate(NavRoutes.CHILD_PAIRING) },
+                onCheckForUpdates = { owner, repo -> viewModel.checkForAppUpdates(owner, repo) },
+                onDownloadUpdate = { url -> viewModel.openUpdateUrl(url) }
             )
         }
 
@@ -339,6 +348,7 @@ fun KidLockNavApp(
                 childName = childName,
                 theme = activeTheme,
                 animationsEnabled = animationsEnabled,
+                updateState = updateState,
                 onLockTablet = {
                     viewModel.lockLocally()
                     navController.navigate(NavRoutes.CHILD_LOCK) {
@@ -353,7 +363,9 @@ fun KidLockNavApp(
                     navController.navigate(NavRoutes.ROLE_SELECTION) {
                         popUpTo(navController.graph.startDestinationId) { inclusive = true }
                     }
-                }
+                },
+                onCheckForUpdates = { owner, repo -> viewModel.checkForAppUpdates(owner, repo) },
+                onDownloadUpdate = { url -> viewModel.openUpdateUrl(url) }
             )
         }
 

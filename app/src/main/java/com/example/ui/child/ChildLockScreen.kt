@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -61,7 +62,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
 import com.example.model.KidTheme
+import com.example.network.UpdateCheckState
 import com.example.ui.components.AnimatedThemeCanvas
+import com.example.ui.components.AppUpdateDialog
 import com.example.ui.onboarding.KeypadButton
 import com.example.ui.parent.ParentPinDialog
 import com.example.ui.theme.EmeraldSuccess
@@ -73,15 +76,19 @@ fun ChildLockScreen(
     theme: KidTheme,
     animationsEnabled: Boolean,
     statusMessage: String?,
+    updateState: UpdateCheckState = UpdateCheckState.Idle,
     onRequestUnlock: (Int) -> Unit,
     onSubmitUnlockCode: (String, (Boolean) -> Unit) -> Unit,
     onVerifyParentPin: (String) -> Boolean,
     onParentPinUnlockSuccess: () -> Unit,
     onOpenThemeGallery: () -> Unit,
-    onOpenPairing: () -> Unit
+    onOpenPairing: () -> Unit,
+    onCheckForUpdates: (String, String) -> Unit = { _, _ -> },
+    onDownloadUpdate: (String) -> Unit = {}
 ) {
     var showCodeDialog by remember { mutableStateOf(false) }
     var showParentPinDialog by remember { mutableStateOf(false) }
+    var showUpdateDialog by remember { mutableStateOf(false) }
     var requestSentBanner by remember { mutableStateOf(false) }
 
     // Mascot bouncing animation
@@ -133,8 +140,23 @@ fun ChildLockScreen(
                 }
             }
 
-            // Right icons: Pair settings & Parent PIN
+            // Right icons: Update, Pair settings & Parent PIN
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                IconButton(
+                    onClick = { showUpdateDialog = true },
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(Color.Black.copy(alpha = 0.35f))
+                        .testTag("btn_child_lock_update")
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.SystemUpdate,
+                        contentDescription = "Update App",
+                        tint = if (updateState is UpdateCheckState.UpdateAvailable) EmeraldSuccess else Color.White
+                    )
+                }
+
                 IconButton(
                     onClick = onOpenPairing,
                     modifier = Modifier
@@ -326,6 +348,15 @@ fun ChildLockScreen(
                 onParentPinUnlockSuccess()
             },
             onDismiss = { showParentPinDialog = false }
+        )
+    }
+
+    if (showUpdateDialog) {
+        AppUpdateDialog(
+            updateState = updateState,
+            onCheckForUpdates = onCheckForUpdates,
+            onDownloadUpdate = onDownloadUpdate,
+            onDismiss = { showUpdateDialog = false }
         )
     }
 }

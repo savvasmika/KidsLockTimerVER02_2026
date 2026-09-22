@@ -27,7 +27,7 @@ sealed class UpdateCheckState {
         val publishedAt: String
     ) : UpdateCheckState()
     data class UpToDate(val currentVersion: String) : UpdateCheckState()
-    data class Error(val message: String) : UpdateCheckState()
+    data class Error(val message: String, val fallbackUrl: String? = null) : UpdateCheckState()
 }
 
 class GitHubUpdateManager(
@@ -41,8 +41,8 @@ class GitHubUpdateManager(
     }
 
     private val httpClient = OkHttpClient.Builder()
-        .connectTimeout(15, TimeUnit.SECONDS)
-        .readTimeout(15, TimeUnit.SECONDS)
+        .connectTimeout(12, TimeUnit.SECONDS)
+        .readTimeout(12, TimeUnit.SECONDS)
         .build()
 
     private val _updateState = MutableStateFlow<UpdateCheckState>(UpdateCheckState.Idle)
@@ -53,9 +53,15 @@ class GitHubUpdateManager(
         repo: String = defaultRepoName
     ): UpdateCheckState = withContext(Dispatchers.IO) {
         _updateState.value = UpdateCheckState.Checking
+        val cleanOwner = owner.trim().ifBlank { defaultRepoOwner }
+        val cleanRepo = repo.trim().ifBlank { defaultRepoName }
+        val fallbackReleasesUrl = "https://github.com/$cleanOwner/$cleanRepo/releases"
+
         try {
-            Log.d(TAG, "Checking for GitHub updates at $owner/$repo...")
-            val releaseUrl = "https://api.github.com/repos/$owner/$repo/releases/latest"
+            Log.d(TAG, "Checking for GitHub updates at $cleanOwner/$cleanRepo...")
+            
+            // 1. Try Releases API
+            val releaseUrl = "https://api.github.com/repos/$cleanOwner/$cleanRepo/releases"
             val request = Request.Builder()
                 .url(releaseUrl)
                 .header("Accept", "application/vnd.github.v3+json")
@@ -64,88 +70,92 @@ class GitHubUpdateManager(
 
             val response = httpClient.newCall(request).execute()
             if (response.isSuccessful) {
-                val bodyString = response.body?.string() ?: ""
-                val json = JSONObject(bodyString)
+                val bodyString = response.body?.string() ?: "[]"
+                val releasesArray = JSONArray(bodyString)
+                if (releasesArray.length() > 0) {
+                    val latestRelease = releasesArray.getJSONObject(0)
+                    val tagName = latestRelease.optString("tag_name", "").replace("v", "").trim()
+                    val releaseName = latestRelease.optString("name", "Release $tagName")
+                    val changelog = latestRelease.optString("body", "Official KidLock release update.")
+                    val htmlUrl = latestRelease.optString("html_url", fallbackReleasesUrl)
+                    val publishedAt = latestRelease.optString("published_at", "")
 
-                val tagName = json.optString("tag_name", "").replace("v", "").trim()
-                val releaseName = json.optString("name", "New Release")
-                val changelog = json.optString("body", "No changelog provided.")
-                val htmlUrl = json.optString("html_url", "https://github.com/$owner/$repo/releases")
-                val publishedAt = json.optString("published_at", "")
-
-                // Find APK asset download URL if available
-                var apkDownloadUrl: String? = null
-                val assetsArray = json.optJSONArray("assets")
-                if (assetsArray != null) {
-                    for (i in 0 until assetsArray.length()) {
-                        val asset = assetsArray.getJSONObject(i)
-                        val name = asset.optString("name", "")
-                        if (name.endsWith(".apk", ignoreCase = true)) {
-                            apkDownloadUrl = asset.optString("browser_download_url", null)
-                            break
+                    var apkDownloadUrl: String? = null
+                    val assetsArray = latestRelease.optJSONArray("assets")
+                    if (assetsArray != null) {
+                        for (i in 0 until assetsArray.length()) {
+                            val asset = assetsArray.getJSONObject(i)
+                            val name = asset.optString("name", "")
+                            if (name.endsWith(".apk", ignoreCase = true)) {
+                                apkDownloadUrl = asset.optString("browser_download_url", null)
+                                break
+                            }
                         }
                     }
-                }
 
-                val hasNewerVersion = isVersionNewer(tagName, CURRENT_APP_VERSION)
-                val result = if (hasNewerVersion) {
-                    UpdateCheckState.UpdateAvailable(
-                        latestVersion = tagName,
-                        releaseName = releaseName,
-                        changelog = changelog,
-                        apkDownloadUrl = apkDownloadUrl ?: htmlUrl,
-                        htmlUrl = htmlUrl,
-                        publishedAt = publishedAt
-                    )
-                } else {
-                    UpdateCheckState.UpToDate(CURRENT_APP_VERSION)
-                }
-                _updateState.value = result
-                return@withContext result
-            } else if (response.code == 404) {
-                // If releases not found, fallback to check latest commits
-                Log.d(TAG, "No releases found. Checking latest commits...")
-                val commitsUrl = "https://api.github.com/repos/$owner/$repo/commits"
-                val commitReq = Request.Builder()
-                    .url(commitsUrl)
-                    .header("Accept", "application/vnd.github.v3+json")
-                    .header("User-Agent", "KidLock-Android-App")
-                    .build()
-
-                val commitResp = httpClient.newCall(commitReq).execute()
-                if (commitResp.isSuccessful) {
-                    val commitBody = commitResp.body?.string() ?: "[]"
-                    val commitArray = JSONArray(commitBody)
-                    if (commitArray.length() > 0) {
-                        val latestCommit = commitArray.getJSONObject(0)
-                        val commitObj = latestCommit.optJSONObject("commit")
-                        val message = commitObj?.optString("message", "Latest GitHub commit") ?: "Latest changes"
-                        val htmlUrl = latestCommit.optString("html_url", "https://github.com/$owner/$repo")
-                        val date = commitObj?.optJSONObject("author")?.optString("date", "") ?: ""
-
-                        val result = UpdateCheckState.UpdateAvailable(
-                            latestVersion = "Git-Latest",
-                            releaseName = "New changes on GitHub",
-                            changelog = message,
-                            apkDownloadUrl = htmlUrl,
+                    val hasNewer = isVersionNewer(tagName, CURRENT_APP_VERSION)
+                    val result = if (hasNewer || apkDownloadUrl != null) {
+                        UpdateCheckState.UpdateAvailable(
+                            latestVersion = tagName.ifBlank { "Latest" },
+                            releaseName = releaseName,
+                            changelog = changelog,
+                            apkDownloadUrl = apkDownloadUrl ?: htmlUrl,
                             htmlUrl = htmlUrl,
-                            publishedAt = date
+                            publishedAt = publishedAt
                         )
-                        _updateState.value = result
-                        return@withContext result
+                    } else {
+                        UpdateCheckState.UpToDate(CURRENT_APP_VERSION)
                     }
+                    _updateState.value = result
+                    return@withContext result
                 }
-                val upToDate = UpdateCheckState.UpToDate(CURRENT_APP_VERSION)
-                _updateState.value = upToDate
-                return@withContext upToDate
-            } else {
-                val errorState = UpdateCheckState.Error("GitHub API HTTP ${response.code}: ${response.message}")
-                _updateState.value = errorState
-                return@withContext errorState
             }
+
+            // 2. Fallback: Check Commits
+            Log.d(TAG, "No releases found. Checking latest commits for $cleanOwner/$cleanRepo...")
+            val commitsUrl = "https://api.github.com/repos/$cleanOwner/$cleanRepo/commits"
+            val commitReq = Request.Builder()
+                .url(commitsUrl)
+                .header("Accept", "application/vnd.github.v3+json")
+                .header("User-Agent", "KidLock-Android-App")
+                .build()
+
+            val commitResp = httpClient.newCall(commitReq).execute()
+            if (commitResp.isSuccessful) {
+                val commitBody = commitResp.body?.string() ?: "[]"
+                val commitArray = JSONArray(commitBody)
+                if (commitArray.length() > 0) {
+                    val latestCommit = commitArray.getJSONObject(0)
+                    val commitObj = latestCommit.optJSONObject("commit")
+                    val message = commitObj?.optString("message", "Latest GitHub commit") ?: "Latest changes"
+                    val htmlUrl = latestCommit.optString("html_url", "https://github.com/$cleanOwner/$cleanRepo")
+                    val date = commitObj?.optJSONObject("author")?.optString("date", "") ?: ""
+
+                    val result = UpdateCheckState.UpdateAvailable(
+                        latestVersion = "Git-Latest",
+                        releaseName = "New GitHub Build / Commits",
+                        changelog = message,
+                        apkDownloadUrl = fallbackReleasesUrl,
+                        htmlUrl = fallbackReleasesUrl,
+                        publishedAt = date
+                    )
+                    _updateState.value = result
+                    return@withContext result
+                }
+            }
+
+            val errorState = UpdateCheckState.Error(
+                message = "Could not find releases on GitHub for $cleanOwner/$cleanRepo.",
+                fallbackUrl = fallbackReleasesUrl
+            )
+            _updateState.value = errorState
+            return@withContext errorState
         } catch (e: Exception) {
             Log.e(TAG, "Error checking for GitHub updates", e)
-            val errorState = UpdateCheckState.Error(e.localizedMessage ?: "Network connection error")
+            val errorState = UpdateCheckState.Error(
+                message = e.localizedMessage ?: "Network connection error while checking GitHub.",
+                fallbackUrl = fallbackReleasesUrl
+            )
             _updateState.value = errorState
             return@withContext errorState
         }

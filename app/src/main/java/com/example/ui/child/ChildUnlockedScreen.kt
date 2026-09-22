@@ -25,6 +25,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ColorLens
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -53,7 +54,9 @@ import androidx.compose.ui.unit.sp
 import com.example.R
 import com.example.model.KidTheme
 import com.example.model.ThemeRegistry
+import com.example.network.UpdateCheckState
 import com.example.ui.components.AnimatedThemeCanvas
+import com.example.ui.components.AppUpdateDialog
 import com.example.ui.parent.ParentPinDialog
 import com.example.ui.theme.EmeraldSuccess
 import com.example.ui.theme.RoseDanger
@@ -63,13 +66,17 @@ fun ChildUnlockedScreen(
     childName: String,
     theme: KidTheme,
     animationsEnabled: Boolean,
+    updateState: UpdateCheckState = UpdateCheckState.Idle,
     onLockTablet: () -> Unit,
     onSelectTheme: (String) -> Unit,
     onOpenThemeGallery: () -> Unit,
     onVerifyParentPin: (String) -> Boolean,
-    onOpenParentSettings: () -> Unit
+    onOpenParentSettings: () -> Unit,
+    onCheckForUpdates: (String, String) -> Unit = { _, _ -> },
+    onDownloadUpdate: (String) -> Unit = {}
 ) {
     var showParentPinDialog by remember { mutableStateOf(false) }
+    var showUpdateDialog by remember { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize()) {
         AnimatedThemeCanvas(
@@ -108,19 +115,36 @@ fun ChildUnlockedScreen(
                 }
             }
 
-            IconButton(
-                onClick = { showParentPinDialog = true },
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-                    .background(Color.Black.copy(alpha = 0.35f))
-                    .testTag("btn_child_to_parent_mode")
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Settings,
-                    contentDescription = "Parent Controls",
-                    tint = Color.White
-                )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                IconButton(
+                    onClick = { showUpdateDialog = true },
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(Color.Black.copy(alpha = 0.35f))
+                        .testTag("btn_child_unlocked_update")
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.SystemUpdate,
+                        contentDescription = "Update App",
+                        tint = if (updateState is UpdateCheckState.UpdateAvailable) EmeraldSuccess else Color.White
+                    )
+                }
+
+                IconButton(
+                    onClick = { showParentPinDialog = true },
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(Color.Black.copy(alpha = 0.35f))
+                        .testTag("btn_child_to_parent_mode")
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Settings,
+                        contentDescription = "Parent Controls",
+                        tint = Color.White
+                    )
+                }
             }
         }
 
@@ -267,6 +291,15 @@ fun ChildUnlockedScreen(
                 onOpenParentSettings()
             },
             onDismiss = { showParentPinDialog = false }
+        )
+    }
+
+    if (showUpdateDialog) {
+        AppUpdateDialog(
+            updateState = updateState,
+            onCheckForUpdates = onCheckForUpdates,
+            onDownloadUpdate = onDownloadUpdate,
+            onDismiss = { showUpdateDialog = false }
         )
     }
 }

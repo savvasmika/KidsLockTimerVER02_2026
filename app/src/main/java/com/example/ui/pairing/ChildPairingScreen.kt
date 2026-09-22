@@ -24,6 +24,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -41,6 +42,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -55,6 +59,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
 import com.example.network.P2PMessage
+import com.example.network.UpdateCheckState
+import com.example.ui.components.AppUpdateDialog
 import com.example.ui.theme.EmeraldSuccess
 import com.example.ui.theme.IndigoPrimary
 import com.example.ui.theme.RoseDanger
@@ -64,11 +70,16 @@ import com.example.ui.theme.RoseDanger
 fun ChildPairingScreen(
     childName: String,
     incomingPairRequest: P2PMessage.PairRequest?,
+    updateState: UpdateCheckState = UpdateCheckState.Idle,
     onAcceptPairing: (P2PMessage.PairRequest) -> Unit,
     onRejectPairing: (P2PMessage.PairRequest) -> Unit,
     onProceedToLockScreen: () -> Unit,
+    onCheckForUpdates: (String, String) -> Unit = { _, _ -> },
+    onDownloadUpdate: (String) -> Unit = {},
     onBack: () -> Unit
 ) {
+    var showUpdateDialog by remember { mutableStateOf(false) }
+
     val infiniteTransition = rememberInfiniteTransition(label = "pulse_child_radar")
     val pulseScale by infiniteTransition.animateFloat(
         initialValue = 0.85f,
@@ -87,6 +98,18 @@ fun ChildPairingScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack, modifier = Modifier.testTag("btn_back_child_pair")) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    IconButton(
+                        onClick = { showUpdateDialog = true },
+                        modifier = Modifier.testTag("btn_child_pair_update")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.SystemUpdate,
+                            contentDescription = "Update App",
+                            tint = if (updateState is UpdateCheckState.UpdateAvailable) EmeraldSuccess else MaterialTheme.colorScheme.primary
+                        )
                     }
                 }
             )
@@ -247,6 +270,15 @@ fun ChildPairingScreen(
                     Text(stringResource(R.string.decline_pairing), color = RoseDanger)
                 }
             }
+        )
+    }
+
+    if (showUpdateDialog) {
+        AppUpdateDialog(
+            updateState = updateState,
+            onCheckForUpdates = onCheckForUpdates,
+            onDownloadUpdate = onDownloadUpdate,
+            onDismiss = { showUpdateDialog = false }
         )
     }
 }
