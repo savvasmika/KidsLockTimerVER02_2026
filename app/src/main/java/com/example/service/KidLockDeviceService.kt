@@ -12,8 +12,10 @@ import androidx.core.app.NotificationCompat
 import com.example.MainActivity
 import com.example.R
 import com.example.data.local.SecurityPreferences
+import com.example.model.DeviceRole
 import com.example.network.LocalP2PCommunication
 import com.example.network.NotificationHelper
+import com.example.overlay.SystemOverlayManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -156,15 +158,23 @@ class KidLockDeviceService : Service() {
             while (isActive) {
                 delay(1000)
                 val isLocked = securityPrefs.isChildLocked()
-                if (!isLocked) {
+                val isChild = securityPrefs.getDeviceRole() == DeviceRole.CHILD
+
+                if (isLocked && isChild) {
+                    SystemOverlayManager.showLockOverlay(applicationContext)
+                } else if (!isLocked) {
+                    SystemOverlayManager.hideLockOverlay(applicationContext)
                     val unlockedUntil = securityPrefs.getUnlockedUntilTimestamp()
                     if (unlockedUntil > 0) {
                         val now = System.currentTimeMillis()
                         val remainingSecs = ((unlockedUntil - now) / 1000).toInt()
                         if (remainingSecs <= 0) {
-                            Log.d(TAG, "Background time expired! Locking tablet and bringing KidLock to front.")
+                            Log.d(TAG, "Background time expired! Locking tablet and launching system overlay.")
                             securityPrefs.setChildLocked(true)
                             securityPrefs.setUnlockedUntilTimestamp(0L)
+                            if (isChild) {
+                                SystemOverlayManager.showLockOverlay(applicationContext)
+                            }
                             bringAppToForeground(applicationContext)
                         }
                     }
