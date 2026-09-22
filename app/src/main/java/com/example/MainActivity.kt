@@ -1,9 +1,11 @@
 package com.example
 
 import android.content.Context
+import android.content.Intent
 import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
+import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
@@ -12,6 +14,7 @@ import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -53,7 +56,10 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        configureLockScreenFlags()
         kioskManager = KioskManager(this)
+
+        handleLockIntent(intent)
 
         setContent {
             val currentLanguage by viewModel.currentLanguage.collectAsState()
@@ -62,7 +68,7 @@ class MainActivity : ComponentActivity() {
             val isChildLocked by viewModel.isChildLocked.collectAsState()
 
             // Automatically apply Kiosk / LockTask when in Child role and locked
-            androidx.compose.runtime.LaunchedEffect(deviceRole, isChildLocked) {
+            LaunchedEffect(deviceRole, isChildLocked) {
                 if (deviceRole == DeviceRole.CHILD) {
                     if (isChildLocked) {
                         kioskManager.startKioskMode(this@MainActivity)
@@ -96,6 +102,36 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleLockIntent(intent)
+    }
+
+    private fun handleLockIntent(intent: Intent?) {
+        val forceLock = intent?.getBooleanExtra("EXTRA_FORCE_LOCK", false) ?: false
+        if (forceLock) {
+            viewModel.lockLocally()
+            if (viewModel.deviceRole.value == DeviceRole.CHILD) {
+                kioskManager.startKioskMode(this)
+            }
+        }
+    }
+
+    private fun configureLockScreenFlags() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+            setShowWhenLocked(true)
+            setTurnScreenOn(true)
+        }
+        @Suppress("DEPRECATION")
+        window.addFlags(
+            WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON or
+            WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
+            WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD or
+            WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON
+        )
+    }
+
     private fun updateLocale(context: Context, languageCode: String): Context {
         val locale = Locale(languageCode)
         Locale.setDefault(locale)
@@ -119,6 +155,7 @@ fun KidLockNavApp(
         DeviceRole.CHILD -> if (isChildLocked) NavRoutes.CHILD_LOCK else NavRoutes.CHILD_UNLOCKED
     }
 
+    val deviceRole by viewModel.deviceRole.collectAsState()
     val pairedDevices by viewModel.pairedDevices.collectAsState()
     val pendingRequests by viewModel.pendingRequests.collectAsState()
     val discoveredDevices by viewModel.discoveredDevices.collectAsState()
@@ -137,6 +174,28 @@ fun KidLockNavApp(
     val updateState by viewModel.updateState.collectAsState()
 
     var showParentSwitchPinDialog by remember { mutableStateOf(false) }
+
+    // Automatic Navigation Sync for Child Device Lock / Unlock State
+    LaunchedEffect(deviceRole, isChildLocked) {
+        if (deviceRole == DeviceRole.CHILD) {
+            val currentRoute = navController.currentDestination?.route
+            if (isChildLocked) {
+                if (currentRoute != NavRoutes.CHILD_LOCK && currentRoute != NavRoutes.CHILD_PAIRING && currentRoute != NavRoutes.CHILD_SETUP) {
+                    navController.navigate(NavRoutes.CHILD_LOCK) {
+                        popUpTo(0) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                }
+            } else {
+                if (currentRoute == NavRoutes.CHILD_LOCK) {
+                    navController.navigate(NavRoutes.CHILD_UNLOCKED) {
+                        popUpTo(0) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                }
+            }
+        }
+    }
 
     NavHost(
         navController = navController,

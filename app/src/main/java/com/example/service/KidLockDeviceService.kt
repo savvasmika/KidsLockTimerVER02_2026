@@ -32,6 +32,24 @@ class KidLockDeviceService : Service() {
             val intent = Intent(context, KidLockDeviceService::class.java)
             context.stopService(intent)
         }
+
+        fun bringAppToForeground(context: Context) {
+            val intent = Intent(context, MainActivity::class.java).apply {
+                addFlags(
+                    Intent.FLAG_ACTIVITY_NEW_TASK or
+                    Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or
+                    Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                    Intent.FLAG_ACTIVITY_SINGLE_TOP
+                )
+                putExtra("EXTRA_FORCE_LOCK", true)
+            }
+            try {
+                context.startActivity(intent)
+                Log.d(TAG, "Successfully requested MainActivity to come to foreground")
+            } catch (e: Exception) {
+                Log.e(TAG, "Error bringing MainActivity to foreground: ${e.message}")
+            }
+        }
     }
 
     override fun onCreate() {

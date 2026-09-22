@@ -195,10 +195,14 @@
     <string name="notif_channel_parent_desc">Ειδοποιήσεις για αιτήματα ξεκλειδώματος και σύζευξη</string>
     <string name="notif_channel_child">Κατάσταση KidLock</string>
     <string name="notif_channel_child_desc">Χρόνος οθόνης και υπενθυμίσεις διαλείμματος</string>
+    <string name="notif_channel_lock_alert">Ειδοποιήσεις Κλειδώματος KidLock</string>
+    <string name="notif_channel_lock_alert_desc">Ειδοποιήσεις υψηλής προτεραιότητας που φέρνουν την οθόνη κλειδώματος στο προσκήνιο</string>
     <string name="notif_unlock_request_title">KidLock: Αίτημα Ξεκλειδώματος</string>
     <string name="notif_unlock_request_msg">Ο/Η %1$s ζητά άδεια για ξεκλείδωμα του tablet.</string>
     <string name="notif_pairing_title">KidLock: Αίτημα Σύζευξης</string>
     <string name="notif_pairing_msg">Ένα νέο tablet ζητά να συνδεθεί με τη συσκευή σας.</string>
+    <string name="locked_by_parent_title">KidLock: Το Tablet Κλειδώθηκε</string>
+    <string name="locked_by_parent_desc">Ο γονέας κλείδωσε τη συσκευή. Ώρα για διάλειμμα!</string>
 
     <!-- Ενημερώσεις Εφαρμογής & GitHub -->
     <string name="app_update_title">Ενημέρωση Εφαρμογής</string>

@@ -21,6 +21,7 @@ import com.example.network.P2PMessage
 import com.example.security.BruteForceProtector
 import com.example.security.CryptoManager
 import com.example.security.NonceReplayManager
+import com.example.service.KidLockDeviceService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -192,6 +193,10 @@ class KidLockRepository(
     fun setChildLockState(locked: Boolean) {
         securityPrefs.setChildLocked(locked)
         _isChildLocked.value = locked
+        if (locked && securityPrefs.getDeviceRole() == DeviceRole.CHILD) {
+            notificationHelper.triggerImmediateChildLockScreen(securityPrefs.getDeviceName())
+            KidLockDeviceService.bringAppToForeground(context)
+        }
     }
 
     fun setActiveTheme(themeId: String) {

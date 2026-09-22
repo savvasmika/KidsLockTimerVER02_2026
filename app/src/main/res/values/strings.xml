@@ -194,10 +194,14 @@
     <string name="notif_channel_parent_desc">Alerts for unlock requests and pairing</string>
     <string name="notif_channel_child">KidLock Status</string>
     <string name="notif_channel_child_desc">Screen time and break reminders</string>
+    <string name="notif_channel_lock_alert">KidLock Screen Lock Alerts</string>
+    <string name="notif_channel_lock_alert_desc">High priority alerts bringing lock screen to the foreground</string>
     <string name="notif_unlock_request_title">KidLock: Unlock Request</string>
     <string name="notif_unlock_request_msg">%1$s wants permission to unlock their tablet.</string>
     <string name="notif_pairing_title">KidLock: Pairing Request</string>
     <string name="notif_pairing_msg">A new tablet is requesting to pair with your device.</string>
+    <string name="locked_by_parent_title">KidLock: Tablet Locked</string>
+    <string name="locked_by_parent_desc">Parent locked the device. Time to take a break!</string>
 
     <!-- App Updates & GitHub -->
     <string name="app_update_title">App Updates</string>
