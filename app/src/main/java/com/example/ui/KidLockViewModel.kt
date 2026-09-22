@@ -45,6 +45,8 @@ class KidLockViewModel(application: Application) : AndroidViewModel(application)
     val isAdvertising: StateFlow<Boolean> = repo.discoveryManager.isAdvertising
 
     val isChildLocked: StateFlow<Boolean> = repo.isChildLocked
+    val remainingUnlockedSeconds: StateFlow<Int> = repo.remainingUnlockedSeconds
+    val initialGrantedSeconds: StateFlow<Int> = repo.initialGrantedSeconds
     val activeTheme: StateFlow<KidTheme> = repo.activeTheme
     val incomingPairRequest: StateFlow<P2PMessage.PairRequest?> = repo.incomingPairRequest
     val unlockStatusMessage: StateFlow<String?> = repo.latestUnlockStatusMessage
@@ -251,12 +253,17 @@ class KidLockViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    fun unlockLocallyViaPin() {
-        repo.setChildLockState(false)
+    fun unlockLocallyViaPin(grantMinutes: Int = 30) {
+        repo.setChildLockState(false, grantMinutes = grantMinutes)
+    }
+
+    fun grantAdditionalTime(minutes: Int) {
+        val currentMinutes = remainingUnlockedSeconds.value / 60
+        repo.setChildLockState(false, grantMinutes = currentMinutes + minutes)
     }
 
     fun lockLocally() {
-        repo.setChildLockState(true)
+        repo.setChildLockState(true, bringToFront = true)
     }
 
     // Settings & Personalization

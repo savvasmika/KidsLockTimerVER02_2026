@@ -218,4 +218,19 @@
     <string name="update_check_failed">Ο έλεγχος ενημέρωσης απέτυχε</string>
     <string name="custom_github_repo">Αλλαγή Αποθετηρίου GitHub</string>
     <string name="hide_repo_settings">Απόκρυψη Ρυθμίσεων Αποθετηρίου</string>
+
+    <!-- Χρονόμετρο Αντίστροφης Μέτρησης & Επιλογή Χρόνου (5λ έως 2 ώρες) -->
+    <string name="remaining_screen_time">Υπολειπόμενος Χρόνος Οθόνης</string>
+    <string name="screen_time_expired">Ο χρόνος οθόνης έληξε! Το tablet κλειδώθηκε.</string>
+    <string name="ask_time_title">Επιλογή Αιτήματος Χρόνου</string>
+    <string name="select_time_prompt">Πόσο χρόνο οθόνης θέλετε να ζητήσετε;</string>
+    <string name="time_5m">5λ</string>
+    <string name="time_10m">10λ</string>
+    <string name="time_15m">15λ</string>
+    <string name="time_20m">20λ</string>
+    <string name="time_30m">30λ</string>
+    <string name="time_45m">45λ</string>
+    <string name="time_60m">1ω (60λ)</string>
+    <string name="time_90m">1.5ω (90λ)</string>
+    <string name="time_120m">2ω (120λ)</string>
 </resources>

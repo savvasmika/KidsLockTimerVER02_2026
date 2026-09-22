@@ -41,6 +41,9 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -94,6 +97,7 @@ fun ChildLockScreen(
 
     var showCodeDialog by remember { mutableStateOf(false) }
     var showParentPinDialog by remember { mutableStateOf(false) }
+    var showRequestTimeDialog by remember { mutableStateOf(false) }
     var requestSentBanner by remember { mutableStateOf(false) }
 
     // Mascot bouncing animation
@@ -274,10 +278,7 @@ fun ChildLockScreen(
             ) {
                 // Request time from parent button
                 Button(
-                    onClick = {
-                        onRequestUnlock(30)
-                        requestSentBanner = true
-                    },
+                    onClick = { showRequestTimeDialog = true },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp)
@@ -344,6 +345,110 @@ fun ChildLockScreen(
             onDismiss = { showParentPinDialog = false }
         )
     }
+
+    // Request Time Dialog (Choice from 5m up to 2 hours)
+    if (showRequestTimeDialog) {
+        RequestTimeModal(
+            theme = theme,
+            onRequest = { selectedMins ->
+                onRequestUnlock(selectedMins)
+                requestSentBanner = true
+                showRequestTimeDialog = false
+            },
+            onDismiss = { showRequestTimeDialog = false }
+        )
+    }
+}
+
+@Composable
+private fun RequestTimeModal(
+    theme: KidTheme,
+    onRequest: (Int) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var selectedMinutes by remember { mutableStateOf(30) }
+    val options = listOf(
+        5 to R.string.time_5m,
+        10 to R.string.time_10m,
+        15 to R.string.time_15m,
+        20 to R.string.time_20m,
+        30 to R.string.time_30m,
+        45 to R.string.time_45m,
+        60 to R.string.time_60m,
+        90 to R.string.time_90m,
+        120 to R.string.time_120m
+    )
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = stringResource(R.string.ask_time_title),
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = stringResource(R.string.select_time_prompt),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(3),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp)
+                ) {
+                    items(options) { (mins, stringResId) ->
+                        val isSelected = selectedMinutes == mins
+                        Surface(
+                            onClick = { selectedMinutes = mins },
+                            shape = RoundedCornerShape(12.dp),
+                            color = if (isSelected) theme.primaryColor else MaterialTheme.colorScheme.surfaceVariant,
+                            modifier = Modifier
+                                .height(48.dp)
+                                .testTag("chip_req_time_$mins")
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Text(
+                                    text = stringResource(stringResId),
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                    color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    fontSize = 14.sp
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { onRequest(selectedMinutes) },
+                modifier = Modifier.testTag("btn_confirm_request_time")
+            ) {
+                Text(stringResource(R.string.btn_request_time))
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = onDismiss,
+                modifier = Modifier.testTag("btn_cancel_request_time")
+            ) {
+                Text(stringResource(R.string.cancel))
+            }
+        }
+    )
 }
 
 @Composable

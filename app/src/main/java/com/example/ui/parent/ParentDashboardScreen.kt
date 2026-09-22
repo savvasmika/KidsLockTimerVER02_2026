@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -463,25 +464,31 @@ private fun PairedDeviceDashboardCard(
 
             Spacer(modifier = Modifier.height(6.dp))
 
-            Row(
+            LazyRow(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                listOf(15, 30, 60, 120).forEach { mins ->
+                items(listOf(5, 10, 15, 20, 30, 45, 60, 90, 120)) { mins ->
                     val isSelected = selectedUnlockDuration == mins
+                    val label = when (mins) {
+                        60 -> "1h"
+                        90 -> "1.5h"
+                        120 -> "2h"
+                        else -> "${mins}m"
+                    }
                     Box(
                         modifier = Modifier
-                            .weight(1f)
                             .clip(RoundedCornerShape(10.dp))
                             .background(
                                 if (isSelected) IndigoPrimary else MaterialTheme.colorScheme.surfaceVariant
                             )
                             .clickable { selectedUnlockDuration = mins }
-                            .padding(vertical = 8.dp),
+                            .padding(horizontal = 14.dp, vertical = 8.dp)
+                            .testTag("chip_duration_$mins"),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = if (mins >= 60) "${mins / 60}h" else "${mins}m",
+                            text = label,
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold,
                             color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant

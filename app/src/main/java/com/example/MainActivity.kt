@@ -182,6 +182,8 @@ fun KidLockNavApp(
     val currentLanguage by viewModel.currentLanguage.collectAsState()
     val childName by viewModel.childName.collectAsState()
     val activeTheme by viewModel.activeTheme.collectAsState()
+    val remainingUnlockedSeconds by viewModel.remainingUnlockedSeconds.collectAsState()
+    val initialGrantedSeconds by viewModel.initialGrantedSeconds.collectAsState()
     val unlockStatusMessage by viewModel.unlockStatusMessage.collectAsState()
     val updateState by viewModel.updateState.collectAsState()
 
@@ -198,7 +200,7 @@ fun KidLockNavApp(
                     currentRoute != NavRoutes.ROLE_SELECTION
                 ) {
                     navController.navigate(NavRoutes.CHILD_LOCK) {
-                        popUpTo(navController.graph.startDestinationId) { inclusive = false }
+                        popUpTo(0) { inclusive = true }
                         launchSingleTop = true
                     }
                 }
@@ -382,6 +384,8 @@ fun KidLockNavApp(
                 childName = childName,
                 theme = activeTheme,
                 animationsEnabled = animationsEnabled,
+                remainingUnlockedSeconds = remainingUnlockedSeconds,
+                initialGrantedSeconds = initialGrantedSeconds,
                 updateState = updateState,
                 onLockTablet = {
                     viewModel.lockLocally()

@@ -61,11 +61,16 @@ import com.example.ui.parent.ParentPinDialog
 import com.example.ui.theme.EmeraldSuccess
 import com.example.ui.theme.RoseDanger
 
+import androidx.compose.material3.LinearProgressIndicator
+import java.util.Locale
+
 @Composable
 fun ChildUnlockedScreen(
     childName: String,
     theme: KidTheme,
     animationsEnabled: Boolean,
+    remainingUnlockedSeconds: Int = 1800,
+    initialGrantedSeconds: Int = 1800,
     updateState: UpdateCheckState = UpdateCheckState.Idle,
     onLockTablet: () -> Unit,
     onSelectTheme: (String) -> Unit,
@@ -189,7 +194,70 @@ fun ChildUnlockedScreen(
                 textAlign = TextAlign.Center
             )
 
-            Spacer(modifier = Modifier.height(28.dp))
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // Live Countdown Timer Display
+            val progressFraction = (remainingUnlockedSeconds.toFloat() / maxOf(1f, initialGrantedSeconds.toFloat())).coerceIn(0f, 1f)
+            val hrs = remainingUnlockedSeconds / 3600
+            val mins = (remainingUnlockedSeconds % 3600) / 60
+            val secs = remainingUnlockedSeconds % 60
+            val formattedTime = if (hrs > 0) {
+                String.format(Locale.getDefault(), "%02d:%02d:%02d", hrs, mins, secs)
+            } else {
+                String.format(Locale.getDefault(), "%02d:%02d", mins, secs)
+            }
+
+            val timerColor = when {
+                remainingUnlockedSeconds < 120 -> RoseDanger
+                remainingUnlockedSeconds < 300 -> com.example.ui.theme.AmberWarning
+                else -> EmeraldSuccess
+            }
+
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = theme.surfaceColor.copy(alpha = 0.92f)
+                ),
+                shape = RoundedCornerShape(24.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("card_countdown_timer")
+            ) {
+                Column(
+                    modifier = Modifier.padding(20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = stringResource(R.string.remaining_screen_time),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White.copy(alpha = 0.9f)
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Text(
+                        text = formattedTime,
+                        fontSize = 48.sp,
+                        fontWeight = FontWeight.Black,
+                        color = timerColor,
+                        modifier = Modifier.testTag("text_remaining_timer_clock")
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    LinearProgressIndicator(
+                        progress = { progressFraction },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(12.dp)
+                            .clip(CircleShape),
+                        color = timerColor,
+                        trackColor = Color.Black.copy(alpha = 0.3f)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
 
             // Quick Theme Selector Strip
             Card(

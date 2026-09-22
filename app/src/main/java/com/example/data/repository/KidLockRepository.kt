@@ -24,6 +24,8 @@ import com.example.security.NonceReplayManager
 import com.example.service.KidLockDeviceService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -55,6 +57,14 @@ class KidLockRepository(
 
     private val _isChildLocked = MutableStateFlow(securityPrefs.isChildLocked())
     val isChildLocked: StateFlow<Boolean> = _isChildLocked.asStateFlow()
+
+    private val _remainingUnlockedSeconds = MutableStateFlow(if (securityPrefs.isChildLocked()) 0 else 30 * 60)
+    val remainingUnlockedSeconds: StateFlow<Int> = _remainingUnlockedSeconds.asStateFlow()
+
+    private val _initialGrantedSeconds = MutableStateFlow(30 * 60)
+    val initialGrantedSeconds: StateFlow<Int> = _initialGrantedSeconds.asStateFlow()
+
+    private var countdownJob: Job? = null
 
     private val _activeTheme = MutableStateFlow(ThemeRegistry.getThemeById(securityPrefs.getActiveThemeId()))
     val activeTheme: StateFlow<KidTheme> = _activeTheme.asStateFlow()
@@ -179,7 +189,7 @@ class KidLockRepository(
                     return
                 }
                 if (msg.targetDeviceId == securityPrefs.getDeviceId()) {
-                    setChildLockState(msg.isLocked, bringToFront = msg.isLocked)
+                    setChildLockState(msg.isLocked, grantMinutes = msg.grantedMinutes, bringToFront = msg.isLocked)
                     _latestUnlockStatusMessage.value = if (!msg.isLocked) "Tablet Unlocked by Parent!" else "Tablet Locked"
                 }
             }
@@ -196,15 +206,46 @@ class KidLockRepository(
         }
     }
 
-    fun setChildLockState(locked: Boolean, bringToFront: Boolean = false) {
+    fun setChildLockState(locked: Boolean, grantMinutes: Int = 0, bringToFront: Boolean = false) {
         val previous = _isChildLocked.value
         securityPrefs.setChildLocked(locked)
         _isChildLocked.value = locked
-        if (locked && securityPrefs.getDeviceRole() == DeviceRole.CHILD) {
-            if (!previous || bringToFront) {
-                notificationHelper.triggerImmediateChildLockScreen(securityPrefs.getDeviceName())
-                if (bringToFront) {
-                    KidLockDeviceService.bringAppToForeground(context)
+
+        countdownJob?.cancel()
+
+        if (locked) {
+            _remainingUnlockedSeconds.value = 0
+            if (securityPrefs.getDeviceRole() == DeviceRole.CHILD) {
+                if (!previous || bringToFront) {
+                    notificationHelper.triggerImmediateChildLockScreen(securityPrefs.getDeviceName())
+                    if (bringToFront) {
+                        KidLockDeviceService.bringAppToForeground(context)
+                    }
+                }
+            }
+        } else {
+            val grantedSecs = if (grantMinutes > 0) {
+                grantMinutes * 60
+            } else if (_remainingUnlockedSeconds.value > 0) {
+                _remainingUnlockedSeconds.value
+            } else {
+                30 * 60
+            }
+
+            _remainingUnlockedSeconds.value = grantedSecs
+            _initialGrantedSeconds.value = maxOf(_initialGrantedSeconds.value, grantedSecs)
+
+            if (securityPrefs.getDeviceRole() == DeviceRole.CHILD) {
+                countdownJob = scope.launch {
+                    while (_remainingUnlockedSeconds.value > 0 && !_isChildLocked.value) {
+                        delay(1000)
+                        _remainingUnlockedSeconds.value -= 1
+                    }
+                    if (!_isChildLocked.value && _remainingUnlockedSeconds.value <= 0) {
+                        Log.d(TAG, "Screen time countdown timer expired! Locking child app now.")
+                        _latestUnlockStatusMessage.value = "Screen time expired! Tablet locked."
+                        setChildLockState(true, bringToFront = true)
+                    }
                 }
             }
         }
@@ -396,7 +437,7 @@ class KidLockRepository(
 
         bruteForceProtector.recordSuccess()
         database.tempUnlockCodeDao().markCodeUsed(enteredCode)
-        setChildLockState(false)
+        setChildLockState(false, grantMinutes = codeObj.grantedMinutes)
         _latestUnlockStatusMessage.value = "Code accepted! Tablet unlocked for ${codeObj.grantedMinutes} min."
         return true
     }

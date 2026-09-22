@@ -217,4 +217,19 @@
     <string name="update_check_failed">Update check failed</string>
     <string name="custom_github_repo">Change GitHub Repo</string>
     <string name="hide_repo_settings">Hide Repo Settings</string>
+
+    <!-- Countdown Timer & Time Selection (5 mins to 2 hours) -->
+    <string name="remaining_screen_time">Remaining Screen Time</string>
+    <string name="screen_time_expired">Screen time expired! Tablet locked.</string>
+    <string name="ask_time_title">Select Screen Time Request</string>
+    <string name="select_time_prompt">How much screen time would you like to ask for?</string>
+    <string name="time_5m">5m</string>
+    <string name="time_10m">10m</string>
+    <string name="time_15m">15m</string>
+    <string name="time_20m">20m</string>
+    <string name="time_30m">30m</string>
+    <string name="time_45m">45m</string>
+    <string name="time_60m">1h (60m)</string>
+    <string name="time_90m">1.5h (90m)</string>
+    <string name="time_120m">2h (120m)</string>
 </resources>
