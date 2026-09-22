@@ -93,20 +93,26 @@ class KioskManager(private val context: Context) {
      */
     fun startKioskMode(activity: Activity) {
         try {
+            if (activity.isFinishing || activity.isDestroyed) return
+
             // Configure if device owner
-            configureDeviceOwnerKiosk()
+            if (isDeviceOwner()) {
+                configureDeviceOwnerKiosk()
+            }
 
             val activityManager = activity.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
             val lockTaskState = activityManager?.lockTaskModeState ?: ActivityManager.LOCK_TASK_MODE_NONE
 
             if (lockTaskState == ActivityManager.LOCK_TASK_MODE_NONE) {
-                activity.startLockTask()
-                Log.d(TAG, "startLockTask() called")
+                if (isDeviceOwner() || isLockTaskPermitted()) {
+                    activity.startLockTask()
+                    Log.d(TAG, "startLockTask() called for Device/Profile Owner")
+                }
             }
 
             // Apply Immersive Mode & Window flags
             applyImmersiveMode(activity)
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Log.e(TAG, "Error entering lock task mode: ${e.message}")
         }
     }
@@ -116,6 +122,8 @@ class KioskManager(private val context: Context) {
      */
     fun stopKioskMode(activity: Activity) {
         try {
+            if (activity.isFinishing || activity.isDestroyed) return
+
             val activityManager = activity.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
             val lockTaskState = activityManager?.lockTaskModeState ?: ActivityManager.LOCK_TASK_MODE_NONE
 
@@ -125,7 +133,7 @@ class KioskManager(private val context: Context) {
             }
 
             restoreSystemUI(activity)
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Log.e(TAG, "Error stopping lock task mode: ${e.message}")
         }
     }

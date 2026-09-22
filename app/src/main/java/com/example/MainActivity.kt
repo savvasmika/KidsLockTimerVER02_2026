@@ -67,17 +67,6 @@ class MainActivity : ComponentActivity() {
             val activeTheme by viewModel.activeTheme.collectAsState()
             val isChildLocked by viewModel.isChildLocked.collectAsState()
 
-            // Automatically apply Kiosk / LockTask when in Child role and locked
-            LaunchedEffect(deviceRole, isChildLocked) {
-                if (deviceRole == DeviceRole.CHILD) {
-                    if (isChildLocked) {
-                        kioskManager.startKioskMode(this@MainActivity)
-                    } else {
-                        kioskManager.stopKioskMode(this@MainActivity)
-                    }
-                }
-            }
-
             // Update Configuration Locale dynamically
             val context = LocalContext.current
             val localizedContext = remember(currentLanguage) {
@@ -112,9 +101,6 @@ class MainActivity : ComponentActivity() {
         val forceLock = intent?.getBooleanExtra("EXTRA_FORCE_LOCK", false) ?: false
         if (forceLock) {
             viewModel.lockLocally()
-            if (viewModel.deviceRole.value == DeviceRole.CHILD) {
-                kioskManager.startKioskMode(this)
-            }
         }
     }
 
@@ -180,16 +166,16 @@ fun KidLockNavApp(
         if (deviceRole == DeviceRole.CHILD) {
             val currentRoute = navController.currentDestination?.route
             if (isChildLocked) {
-                if (currentRoute != NavRoutes.CHILD_LOCK && currentRoute != NavRoutes.CHILD_PAIRING && currentRoute != NavRoutes.CHILD_SETUP) {
+                if (currentRoute == NavRoutes.CHILD_UNLOCKED) {
                     navController.navigate(NavRoutes.CHILD_LOCK) {
-                        popUpTo(0) { inclusive = true }
+                        popUpTo(NavRoutes.CHILD_UNLOCKED) { inclusive = true }
                         launchSingleTop = true
                     }
                 }
             } else {
                 if (currentRoute == NavRoutes.CHILD_LOCK) {
                     navController.navigate(NavRoutes.CHILD_UNLOCKED) {
-                        popUpTo(0) { inclusive = true }
+                        popUpTo(NavRoutes.CHILD_LOCK) { inclusive = true }
                         launchSingleTop = true
                     }
                 }
@@ -365,7 +351,7 @@ fun KidLockNavApp(
                 onOpenParentSettings = {
                     viewModel.resetDeviceRole()
                     navController.navigate(NavRoutes.ROLE_SELECTION) {
-                        popUpTo(0) { inclusive = true }
+                        popUpTo(navController.graph.startDestinationId) { inclusive = true }
                     }
                 }
             )
@@ -435,7 +421,7 @@ fun KidLockNavApp(
                 showParentSwitchPinDialog = false
                 viewModel.resetDeviceRole()
                 navController.navigate(NavRoutes.ROLE_SELECTION) {
-                    popUpTo(0) { inclusive = true }
+                    popUpTo(navController.graph.startDestinationId) { inclusive = true }
                 }
             },
             onDismiss = { showParentSwitchPinDialog = false }
