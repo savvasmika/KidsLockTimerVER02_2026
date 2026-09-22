@@ -18,7 +18,6 @@ import com.example.network.LocalDiscoveryManager
 import com.example.network.LocalP2PCommunication
 import com.example.network.NotificationHelper
 import com.example.network.P2PMessage
-import com.example.overlay.SystemOverlayManager
 import com.example.security.BruteForceProtector
 import com.example.security.CryptoManager
 import com.example.security.NonceReplayManager
@@ -226,7 +225,6 @@ class KidLockRepository(
             securityPrefs.setUnlockedUntilTimestamp(0L)
             _remainingUnlockedSeconds.value = 0
             if (securityPrefs.getDeviceRole() == DeviceRole.CHILD) {
-                SystemOverlayManager.showLockOverlay(context)
                 if (!previous || bringToFront) {
                     notificationHelper.triggerImmediateChildLockScreen(securityPrefs.getDeviceName())
                     if (bringToFront) {
@@ -235,7 +233,6 @@ class KidLockRepository(
                 }
             }
         } else {
-            SystemOverlayManager.hideLockOverlay(context)
             val now = System.currentTimeMillis()
             val existingUntil = securityPrefs.getUnlockedUntilTimestamp()
             val unlockUntil = if (grantMinutes > 0) {

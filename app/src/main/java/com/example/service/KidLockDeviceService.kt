@@ -15,7 +15,6 @@ import com.example.data.local.SecurityPreferences
 import com.example.model.DeviceRole
 import com.example.network.LocalP2PCommunication
 import com.example.network.NotificationHelper
-import com.example.overlay.SystemOverlayManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -91,6 +90,19 @@ class KidLockDeviceService : Service() {
                 putExtra("EXTRA_FORCE_LOCK", true)
             }
 
+            // Move app task to front using ActivityManager
+            try {
+                val am = context.getSystemService(Context.ACTIVITY_SERVICE) as? android.app.ActivityManager
+                val tasks = am?.appTasks
+                if (!tasks.isNullOrEmpty()) {
+                    for (task in tasks) {
+                        task.moveToFront()
+                    }
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "ActivityManager moveToFront error: ${e.message}")
+            }
+
             val pendingIntentFlags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             } else {
@@ -161,20 +173,17 @@ class KidLockDeviceService : Service() {
                 val isChild = securityPrefs.getDeviceRole() == DeviceRole.CHILD
 
                 if (isLocked && isChild) {
-                    SystemOverlayManager.showLockOverlay(applicationContext)
+                    // Bring MainActivity to front if app is locked and child attempts to switch away
+                    bringAppToForeground(applicationContext)
                 } else if (!isLocked) {
-                    SystemOverlayManager.hideLockOverlay(applicationContext)
                     val unlockedUntil = securityPrefs.getUnlockedUntilTimestamp()
                     if (unlockedUntil > 0) {
                         val now = System.currentTimeMillis()
                         val remainingSecs = ((unlockedUntil - now) / 1000).toInt()
                         if (remainingSecs <= 0) {
-                            Log.d(TAG, "Background time expired! Locking tablet and launching system overlay.")
+                            Log.d(TAG, "Background time expired! Locking tablet and bringing MainActivity to front.")
                             securityPrefs.setChildLocked(true)
                             securityPrefs.setUnlockedUntilTimestamp(0L)
-                            if (isChild) {
-                                SystemOverlayManager.showLockOverlay(applicationContext)
-                            }
                             bringAppToForeground(applicationContext)
                         }
                     }
