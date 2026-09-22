@@ -45,6 +45,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -61,6 +62,10 @@ import com.example.ui.parent.ParentPinDialog
 import com.example.ui.theme.EmeraldSuccess
 import com.example.ui.theme.RoseDanger
 
+import android.content.Intent
+import android.net.Uri
+import android.os.Build
+import android.provider.Settings
 import androidx.compose.material3.LinearProgressIndicator
 import java.util.Locale
 
@@ -193,6 +198,67 @@ fun ChildUnlockedScreen(
                 color = Color.White.copy(alpha = 0.85f),
                 textAlign = TextAlign.Center
             )
+
+            // Check Display Over Other Apps permission
+            val localCtx = LocalContext.current
+            val hasOverlayPermission = remember(localCtx) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    Settings.canDrawOverlays(localCtx)
+                } else {
+                    true
+                }
+            }
+
+            if (!hasOverlayPermission) {
+                Spacer(modifier = Modifier.height(16.dp))
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = com.example.ui.theme.AmberWarning.copy(alpha = 0.25f)
+                    ),
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "⚠️ Overlay Permission Required",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "To allow KidsLockTimer to auto-lock over YouTube/Chrome when time expires, grant 'Display over other apps'.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.White.copy(alpha = 0.9f),
+                            textAlign = TextAlign.Center
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Button(
+                            onClick = {
+                                try {
+                                    val intent = Intent(
+                                        Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                                        Uri.parse("package:${localCtx.packageName}")
+                                    )
+                                    localCtx.startActivity(intent)
+                                } catch (e: Exception) {
+                                    val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION)
+                                    localCtx.startActivity(intent)
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = com.example.ui.theme.AmberWarning
+                            ),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text("Grant Permission", color = Color.Black, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
 
             Spacer(modifier = Modifier.height(20.dp))
 
