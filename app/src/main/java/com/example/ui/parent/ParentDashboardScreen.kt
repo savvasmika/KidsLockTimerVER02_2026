@@ -386,6 +386,7 @@ private fun PairedDeviceDashboardCard(
     onSettings: () -> Unit
 ) {
     var selectedUnlockDuration by remember { mutableStateOf(30) }
+    var optimisticIsLocked by remember(device.isLocked) { mutableStateOf(device.isLocked) }
 
     Card(
         modifier = Modifier
@@ -434,7 +435,7 @@ private fun PairedDeviceDashboardCard(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         ConnectionStatusBadge(status = device.connectionType)
-                        LockStatusBadge(isLocked = device.isLocked)
+                        LockStatusBadge(isLocked = optimisticIsLocked)
                     }
                 }
 
@@ -496,9 +497,12 @@ private fun PairedDeviceDashboardCard(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                if (device.isLocked) {
+                if (optimisticIsLocked) {
                     Button(
-                        onClick = { onUnlock(selectedUnlockDuration) },
+                        onClick = {
+                            optimisticIsLocked = false
+                            onUnlock(selectedUnlockDuration)
+                        },
                         modifier = Modifier
                             .weight(1f)
                             .height(46.dp)
@@ -512,7 +516,10 @@ private fun PairedDeviceDashboardCard(
                     }
                 } else {
                     Button(
-                        onClick = onLock,
+                        onClick = {
+                            optimisticIsLocked = true
+                            onLock()
+                        },
                         modifier = Modifier
                             .weight(1f)
                             .height(46.dp)

@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">KidLock</string>
+    <string name="app_name">KidsLockTimer2026</string>
     <string name="tagline">Smart screen time made simple</string>
     <string name="device_admin_label">KidLock Parental Guardian</string>
     <string name="device_admin_description">Allows KidLock to manage screen lock time and enforce parental controls safely.</string>

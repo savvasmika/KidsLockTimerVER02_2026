@@ -22,6 +22,6 @@ dependencyResolutionManagement {
   }
 }
 
-rootProject.name = "KidLock"
+rootProject.name = "KidsLockTimer2026"
 
 include(":app")

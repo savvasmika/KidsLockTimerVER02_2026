@@ -44,7 +44,7 @@ class KidLockDeviceService : Service() {
 
         fun bringAppToForeground(context: Context) {
             val now = System.currentTimeMillis()
-            if (now - lastForegroundCallTime < 1500) {
+            if (now - lastForegroundCallTime < 1000) {
                 Log.d(TAG, "bringAppToForeground throttled")
                 return
             }
@@ -74,6 +74,45 @@ class KidLockDeviceService : Service() {
                 )
                 putExtra("EXTRA_FORCE_LOCK", true)
             }
+
+            val pendingIntentFlags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            } else {
+                PendingIntent.FLAG_UPDATE_CURRENT
+            }
+
+            val fullScreenPendingIntent = PendingIntent.getActivity(
+                context,
+                NotificationHelper.NOTIF_ID_LOCK_ALERT,
+                intent,
+                pendingIntentFlags
+            )
+
+            // Trigger high-priority Full Screen Intent notification (bypasses Android 10+ background activity restrictions)
+            try {
+                val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as? android.app.NotificationManager
+                val fullScreenNotification = NotificationCompat.Builder(context, NotificationHelper.CHANNEL_LOCK_ALERT)
+                    .setSmallIcon(R.drawable.ic_launcher_foreground)
+                    .setContentTitle(context.getString(R.string.app_name))
+                    .setContentText(context.getString(R.string.status_locked))
+                    .setPriority(NotificationCompat.PRIORITY_MAX)
+                    .setCategory(NotificationCompat.CATEGORY_ALARM)
+                    .setFullScreenIntent(fullScreenPendingIntent, true)
+                    .setAutoCancel(true)
+                    .build()
+
+                notificationManager?.notify(NotificationHelper.NOTIF_ID_LOCK_ALERT, fullScreenNotification)
+            } catch (e: Exception) {
+                Log.w(TAG, "FullScreenIntent notification error: ${e.message}")
+            }
+
+            // Also send PendingIntent and direct startActivity for maximum compatibility across all Android versions
+            try {
+                fullScreenPendingIntent.send()
+            } catch (e: Exception) {
+                Log.w(TAG, "PendingIntent send error: ${e.message}")
+            }
+
             try {
                 context.startActivity(intent)
                 Log.d(TAG, "Successfully requested MainActivity to come to foreground")
