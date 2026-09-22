@@ -100,6 +100,7 @@ class MainActivity : ComponentActivity() {
     private fun handleLockIntent(intent: Intent?) {
         val forceLock = intent?.getBooleanExtra("EXTRA_FORCE_LOCK", false) ?: false
         if (forceLock) {
+            intent?.removeExtra("EXTRA_FORCE_LOCK")
             viewModel.lockLocally()
         }
     }
@@ -164,11 +165,15 @@ fun KidLockNavApp(
     // Automatic Navigation Sync for Child Device Lock / Unlock State
     LaunchedEffect(deviceRole, isChildLocked) {
         if (deviceRole == DeviceRole.CHILD) {
-            val currentRoute = navController.currentDestination?.route
+            val currentRoute = navController.currentDestination?.route ?: return@LaunchedEffect
             if (isChildLocked) {
-                if (currentRoute == NavRoutes.CHILD_UNLOCKED) {
+                if (currentRoute != NavRoutes.CHILD_LOCK &&
+                    currentRoute != NavRoutes.CHILD_PAIRING &&
+                    currentRoute != NavRoutes.CHILD_SETUP &&
+                    currentRoute != NavRoutes.ROLE_SELECTION
+                ) {
                     navController.navigate(NavRoutes.CHILD_LOCK) {
-                        popUpTo(NavRoutes.CHILD_UNLOCKED) { inclusive = true }
+                        popUpTo(navController.graph.startDestinationId) { inclusive = false }
                         launchSingleTop = true
                     }
                 }

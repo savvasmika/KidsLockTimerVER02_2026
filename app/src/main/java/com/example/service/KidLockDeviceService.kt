@@ -18,22 +18,38 @@ class KidLockDeviceService : Service() {
     companion object {
         private const val TAG = "KidLockService"
         private const val NOTIF_SERVICE_ID = 9901
+        private var lastForegroundCallTime = 0L
 
         fun startService(context: Context) {
-            val intent = Intent(context, KidLockDeviceService::class.java)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                context.startForegroundService(intent)
-            } else {
-                context.startService(intent)
+            try {
+                val intent = Intent(context, KidLockDeviceService::class.java)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    context.startForegroundService(intent)
+                } else {
+                    context.startService(intent)
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error starting KidLockDeviceService: ${e.message}")
             }
         }
 
         fun stopService(context: Context) {
-            val intent = Intent(context, KidLockDeviceService::class.java)
-            context.stopService(intent)
+            try {
+                val intent = Intent(context, KidLockDeviceService::class.java)
+                context.stopService(intent)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error stopping KidLockDeviceService: ${e.message}")
+            }
         }
 
         fun bringAppToForeground(context: Context) {
+            val now = System.currentTimeMillis()
+            if (now - lastForegroundCallTime < 1500) {
+                Log.d(TAG, "bringAppToForeground throttled")
+                return
+            }
+            lastForegroundCallTime = now
+
             val intent = Intent(context, MainActivity::class.java).apply {
                 addFlags(
                     Intent.FLAG_ACTIVITY_NEW_TASK or

@@ -64,40 +64,38 @@ class NotificationHelper(private val context: Context) {
     }
 
     fun triggerImmediateChildLockScreen(childName: String = "") {
-        val launchIntent = Intent(context, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or
-                    Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or
-                    Intent.FLAG_ACTIVITY_CLEAR_TOP or
-                    Intent.FLAG_ACTIVITY_SINGLE_TOP
-            putExtra("EXTRA_FORCE_LOCK", true)
-        }
-
         try {
-            context.startActivity(launchIntent)
+            val launchIntent = Intent(context, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                        Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or
+                        Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                        Intent.FLAG_ACTIVITY_SINGLE_TOP
+                putExtra("EXTRA_FORCE_LOCK", true)
+            }
+
+            val fullScreenPendingIntent = PendingIntent.getActivity(
+                context,
+                NOTIF_ID_LOCK_ALERT,
+                launchIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+
+            val notification = NotificationCompat.Builder(context, CHANNEL_LOCK_ALERT)
+                .setSmallIcon(R.drawable.ic_launcher_foreground)
+                .setContentTitle(context.getString(R.string.locked_by_parent_title))
+                .setContentText(context.getString(R.string.locked_by_parent_desc))
+                .setPriority(NotificationCompat.PRIORITY_MAX)
+                .setCategory(NotificationCompat.CATEGORY_ALARM)
+                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+                .setFullScreenIntent(fullScreenPendingIntent, true)
+                .setAutoCancel(true)
+                .build()
+
+            val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            notificationManager.notify(NOTIF_ID_LOCK_ALERT, notification)
         } catch (e: Exception) {
-            android.util.Log.e("NotificationHelper", "Direct startActivity error: ${e.message}")
+            android.util.Log.e("NotificationHelper", "Error in triggerImmediateChildLockScreen: ${e.message}")
         }
-
-        val fullScreenPendingIntent = PendingIntent.getActivity(
-            context,
-            NOTIF_ID_LOCK_ALERT,
-            launchIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
-        val notification = NotificationCompat.Builder(context, CHANNEL_LOCK_ALERT)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
-            .setContentTitle(context.getString(R.string.locked_by_parent_title))
-            .setContentText(context.getString(R.string.locked_by_parent_desc))
-            .setPriority(NotificationCompat.PRIORITY_MAX)
-            .setCategory(NotificationCompat.CATEGORY_ALARM)
-            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-            .setFullScreenIntent(fullScreenPendingIntent, true)
-            .setAutoCancel(true)
-            .build()
-
-        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        notificationManager.notify(NOTIF_ID_LOCK_ALERT, notification)
     }
 
     fun showUnlockRequestNotification(childName: String, requestId: String) {

@@ -77,7 +77,7 @@ class KidLockRepository(
         scope.launch {
             backendApiClient.cloudUnlockCommands.collect { (deviceId, isLocked) ->
                 if (deviceId == securityPrefs.getDeviceId()) {
-                    setChildLockState(isLocked)
+                    setChildLockState(isLocked, bringToFront = isLocked)
                     _latestUnlockStatusMessage.value = if (!isLocked) "Parent unlocked via Cloud!" else "Locked by parent"
                 }
             }
@@ -173,7 +173,7 @@ class KidLockRepository(
                     return
                 }
                 if (msg.targetDeviceId == securityPrefs.getDeviceId()) {
-                    setChildLockState(msg.isLocked)
+                    setChildLockState(msg.isLocked, bringToFront = msg.isLocked)
                     _latestUnlockStatusMessage.value = if (!msg.isLocked) "Tablet Unlocked by Parent!" else "Tablet Locked"
                 }
             }
@@ -190,12 +190,17 @@ class KidLockRepository(
         }
     }
 
-    fun setChildLockState(locked: Boolean) {
+    fun setChildLockState(locked: Boolean, bringToFront: Boolean = false) {
+        val previous = _isChildLocked.value
         securityPrefs.setChildLocked(locked)
         _isChildLocked.value = locked
         if (locked && securityPrefs.getDeviceRole() == DeviceRole.CHILD) {
-            notificationHelper.triggerImmediateChildLockScreen(securityPrefs.getDeviceName())
-            KidLockDeviceService.bringAppToForeground(context)
+            if (!previous || bringToFront) {
+                notificationHelper.triggerImmediateChildLockScreen(securityPrefs.getDeviceName())
+                if (bringToFront) {
+                    KidLockDeviceService.bringAppToForeground(context)
+                }
+            }
         }
     }
 

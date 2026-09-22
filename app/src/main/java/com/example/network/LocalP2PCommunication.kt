@@ -135,6 +135,7 @@ class LocalP2PCommunication {
         scope.launch {
             try {
                 client.use { socket ->
+                    socket.soTimeout = 5000
                     val reader = BufferedReader(InputStreamReader(socket.getInputStream()))
                     val writer = PrintWriter(socket.getOutputStream(), true)
 
