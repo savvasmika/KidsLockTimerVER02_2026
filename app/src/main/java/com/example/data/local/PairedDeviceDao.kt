@@ -29,6 +29,9 @@ interface PairedDeviceDao {
     @Query("UPDATE paired_devices SET isLocked = :isLocked, lastActivityTimestamp = :timestamp WHERE deviceId = :deviceId")
     suspend fun updateLockStatus(deviceId: String, isLocked: Boolean, timestamp: Long = System.currentTimeMillis())
 
+    @Query("UPDATE paired_devices SET isLocked = :isLocked, remainingUnlockedSeconds = :remainingSeconds, lastActivityTimestamp = :timestamp WHERE deviceId = :deviceId")
+    suspend fun updateLockAndTimerStatus(deviceId: String, isLocked: Boolean, remainingSeconds: Int, timestamp: Long = System.currentTimeMillis())
+
     @Query("UPDATE paired_devices SET isConnected = :connected, connectionType = :connectionType WHERE deviceId = :deviceId")
     suspend fun updateConnectionStatus(deviceId: String, connected: Boolean, connectionType: com.example.model.ConnectionStatus)
 

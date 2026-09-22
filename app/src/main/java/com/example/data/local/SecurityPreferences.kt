@@ -29,6 +29,7 @@ class SecurityPreferences(context: Context) {
         private const val KEY_PAIRED_PARENT_IP = "key_paired_parent_ip"
         private const val KEY_PAIRED_PARENT_PORT = "key_paired_parent_port"
         private const val KEY_AUTH_TOKEN = "key_auth_token"
+        private const val KEY_UNLOCKED_UNTIL_TIMESTAMP = "key_unlocked_until_timestamp"
     }
 
     init {
@@ -159,6 +160,14 @@ class SecurityPreferences(context: Context) {
 
     fun setChildLocked(locked: Boolean) {
         prefs.edit().putBoolean(KEY_IS_CHILD_LOCKED, locked).apply()
+    }
+
+    fun getUnlockedUntilTimestamp(): Long {
+        return prefs.getLong(KEY_UNLOCKED_UNTIL_TIMESTAMP, 0L)
+    }
+
+    fun setUnlockedUntilTimestamp(timestamp: Long) {
+        prefs.edit().putLong(KEY_UNLOCKED_UNTIL_TIMESTAMP, timestamp).apply()
     }
 
     fun getInactivityTimeout(): Int {

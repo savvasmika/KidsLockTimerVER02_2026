@@ -83,8 +83,9 @@ sealed class P2PMessage {
     data class HeartbeatMsg(
         val childDeviceId: String,
         val isLocked: Boolean,
-        val batteryPercent: Int,
-        val activeThemeId: String
+        val remainingUnlockedSeconds: Int = 0,
+        val batteryPercent: Int = 100,
+        val activeThemeId: String = "space"
     ) : P2PMessage()
 }
 
@@ -239,6 +240,7 @@ class LocalP2PCommunication {
                                 val msg = P2PMessage.HeartbeatMsg(
                                     childDeviceId = json.getString("childDeviceId"),
                                     isLocked = json.getBoolean("isLocked"),
+                                    remainingUnlockedSeconds = json.optInt("remainingSeconds", 0),
                                     batteryPercent = json.optInt("battery", 100),
                                     activeThemeId = json.optString("theme", "space")
                                 )

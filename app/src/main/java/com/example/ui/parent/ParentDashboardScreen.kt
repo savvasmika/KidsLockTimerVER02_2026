@@ -437,6 +437,29 @@ private fun PairedDeviceDashboardCard(
                     ) {
                         ConnectionStatusBadge(status = device.connectionType)
                         LockStatusBadge(isLocked = optimisticIsLocked)
+                        if (!optimisticIsLocked && device.remainingUnlockedSeconds > 0) {
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = EmeraldSuccess.copy(alpha = 0.15f)
+                            ) {
+                                val mins = device.remainingUnlockedSeconds / 60
+                                val secs = device.remainingUnlockedSeconds % 60
+                                val timeText = if (mins >= 60) {
+                                    val hrs = mins / 60
+                                    val remMins = mins % 60
+                                    "${hrs}h ${remMins}m ${secs}s"
+                                } else {
+                                    "${mins}m ${secs}s"
+                                }
+                                Text(
+                                    text = "⏳ $timeText",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = EmeraldSuccess,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                )
+                            }
+                        }
                     }
                 }
 

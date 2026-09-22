@@ -48,7 +48,8 @@ data class PairedChildDevice(
     val inactivityTimeoutMinutes: Int = 15,
     val dailyLimitMinutes: Int = 120,
     val usedMinutesToday: Int = 45,
-    val isKioskActive: Boolean = false
+    val isKioskActive: Boolean = false,
+    val remainingUnlockedSeconds: Int = 0
 )
 
 @Entity(tableName = "unlock_requests")

@@ -109,6 +109,10 @@ class KidLockRepository(
                 }
             }
         }
+
+        if (securityPrefs.getDeviceRole() == DeviceRole.CHILD && !securityPrefs.isChildLocked()) {
+            startPersistentCountdownTimer()
+        }
     }
 
     private suspend fun handleIncomingP2PMessage(msg: P2PMessage) {
@@ -201,7 +205,11 @@ class KidLockRepository(
             }
 
             is P2PMessage.HeartbeatMsg -> {
-                database.pairedDeviceDao().updateLockStatus(msg.childDeviceId, msg.isLocked)
+                database.pairedDeviceDao().updateLockAndTimerStatus(
+                    deviceId = msg.childDeviceId,
+                    isLocked = msg.isLocked,
+                    remainingSeconds = msg.remainingUnlockedSeconds
+                )
             }
         }
     }
@@ -214,6 +222,7 @@ class KidLockRepository(
         countdownJob?.cancel()
 
         if (locked) {
+            securityPrefs.setUnlockedUntilTimestamp(0L)
             _remainingUnlockedSeconds.value = 0
             if (securityPrefs.getDeviceRole() == DeviceRole.CHILD) {
                 if (!previous || bringToFront) {
@@ -224,29 +233,45 @@ class KidLockRepository(
                 }
             }
         } else {
-            val grantedSecs = if (grantMinutes > 0) {
-                grantMinutes * 60
-            } else if (_remainingUnlockedSeconds.value > 0) {
-                _remainingUnlockedSeconds.value
+            val now = System.currentTimeMillis()
+            val existingUntil = securityPrefs.getUnlockedUntilTimestamp()
+            val unlockUntil = if (grantMinutes > 0) {
+                now + (grantMinutes * 60 * 1000L)
+            } else if (existingUntil > now) {
+                existingUntil
             } else {
-                30 * 60
+                now + (30 * 60 * 1000L)
             }
 
-            _remainingUnlockedSeconds.value = grantedSecs
-            _initialGrantedSeconds.value = maxOf(_initialGrantedSeconds.value, grantedSecs)
+            securityPrefs.setUnlockedUntilTimestamp(unlockUntil)
+            val initialSecs = ((unlockUntil - now) / 1000).toInt()
+            _remainingUnlockedSeconds.value = maxOf(0, initialSecs)
+            _initialGrantedSeconds.value = maxOf(_initialGrantedSeconds.value, initialSecs)
 
             if (securityPrefs.getDeviceRole() == DeviceRole.CHILD) {
-                countdownJob = scope.launch {
-                    while (_remainingUnlockedSeconds.value > 0 && !_isChildLocked.value) {
-                        delay(1000)
-                        _remainingUnlockedSeconds.value -= 1
-                    }
-                    if (!_isChildLocked.value && _remainingUnlockedSeconds.value <= 0) {
-                        Log.d(TAG, "Screen time countdown timer expired! Locking child app now.")
-                        _latestUnlockStatusMessage.value = "Screen time expired! Tablet locked."
-                        setChildLockState(true, bringToFront = true)
-                    }
+                startPersistentCountdownTimer()
+            }
+        }
+    }
+
+    private fun startPersistentCountdownTimer() {
+        countdownJob?.cancel()
+        countdownJob = scope.launch {
+            while (!_isChildLocked.value) {
+                val now = System.currentTimeMillis()
+                val unlockedUntil = securityPrefs.getUnlockedUntilTimestamp()
+                val remaining = ((unlockedUntil - now) / 1000).toInt()
+
+                if (remaining <= 0) {
+                    _remainingUnlockedSeconds.value = 0
+                    Log.d(TAG, "Screen time countdown timer expired! Locking child app now.")
+                    _latestUnlockStatusMessage.value = "Screen time expired! Tablet locked."
+                    setChildLockState(true, bringToFront = true)
+                    break
+                } else {
+                    _remainingUnlockedSeconds.value = remaining
                 }
+                delay(1000)
             }
         }
     }

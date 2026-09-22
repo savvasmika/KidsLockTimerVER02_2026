@@ -11,9 +11,23 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.example.MainActivity
 import com.example.R
+import com.example.data.local.SecurityPreferences
+import com.example.network.LocalP2PCommunication
 import com.example.network.NotificationHelper
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import org.json.JSONObject
 
 class KidLockDeviceService : Service() {
+
+    private val serviceScope = CoroutineScope(Dispatchers.IO)
+    private var timerJob: Job? = null
+    private lateinit var securityPrefs: SecurityPreferences
+    private val p2pCommunication = LocalP2PCommunication()
 
     companion object {
         private const val TAG = "KidLockService"
@@ -124,13 +138,64 @@ class KidLockDeviceService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        securityPrefs = SecurityPreferences(applicationContext)
         Log.d(TAG, "KidLock background service created")
+        startBackgroundTimerMonitor()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val notification = createServiceNotification()
         startForeground(NOTIF_SERVICE_ID, notification)
         return START_STICKY
+    }
+
+    private fun startBackgroundTimerMonitor() {
+        timerJob?.cancel()
+        timerJob = serviceScope.launch {
+            var heartbeatTickCounter = 0
+            while (isActive) {
+                delay(1000)
+                val isLocked = securityPrefs.isChildLocked()
+                if (!isLocked) {
+                    val unlockedUntil = securityPrefs.getUnlockedUntilTimestamp()
+                    if (unlockedUntil > 0) {
+                        val now = System.currentTimeMillis()
+                        val remainingSecs = ((unlockedUntil - now) / 1000).toInt()
+                        if (remainingSecs <= 0) {
+                            Log.d(TAG, "Background time expired! Locking tablet and bringing KidLock to front.")
+                            securityPrefs.setChildLocked(true)
+                            securityPrefs.setUnlockedUntilTimestamp(0L)
+                            bringAppToForeground(applicationContext)
+                        }
+                    }
+                }
+
+                // Periodically send Heartbeat P2P status to Parent device every 3 seconds
+                heartbeatTickCounter++
+                if (heartbeatTickCounter >= 3) {
+                    heartbeatTickCounter = 0
+                    val parentIp = securityPrefs.getPairedParentIp()
+                    val parentPort = securityPrefs.getPairedParentPort()
+                    if (parentIp.isNotEmpty()) {
+                        val now = System.currentTimeMillis()
+                        val unlockedUntil = securityPrefs.getUnlockedUntilTimestamp()
+                        val remainingSecs = if (!securityPrefs.isChildLocked() && unlockedUntil > now) {
+                            ((unlockedUntil - now) / 1000).toInt()
+                        } else 0
+
+                        val payload = JSONObject().apply {
+                            put("type", "HEARTBEAT")
+                            put("childDeviceId", securityPrefs.getDeviceId())
+                            put("isLocked", securityPrefs.isChildLocked())
+                            put("remainingSeconds", remainingSecs)
+                            put("battery", 90)
+                            put("theme", securityPrefs.getActiveThemeId())
+                        }
+                        p2pCommunication.sendMessage(parentIp, parentPort, payload)
+                    }
+                }
+            }
+        }
     }
 
     private fun createServiceNotification(): Notification {
@@ -157,6 +222,7 @@ class KidLockDeviceService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
+        timerJob?.cancel()
         Log.d(TAG, "KidLock background service stopped")
     }
 }
