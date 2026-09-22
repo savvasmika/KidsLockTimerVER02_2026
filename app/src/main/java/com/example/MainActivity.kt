@@ -109,6 +109,13 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus && viewModel.deviceRole.value == DeviceRole.CHILD && viewModel.isChildLocked.value) {
+            kioskManager.applyImmersiveMode(this)
+        }
+    }
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)

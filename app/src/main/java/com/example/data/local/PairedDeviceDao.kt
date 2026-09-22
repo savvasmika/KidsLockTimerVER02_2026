@@ -46,4 +46,10 @@ interface PairedDeviceDao {
 
     @Query("DELETE FROM paired_devices WHERE deviceId = :deviceId")
     suspend fun deleteDeviceById(deviceId: String)
+
+    @Query("DELETE FROM paired_devices WHERE ipAddress = :ipAddress AND deviceId != :exceptDeviceId")
+    suspend fun deleteDuplicatesByIp(ipAddress: String, exceptDeviceId: String)
+
+    @Query("DELETE FROM paired_devices WHERE name = :name AND deviceId != :exceptDeviceId")
+    suspend fun deleteDuplicatesByName(name: String, exceptDeviceId: String)
 }

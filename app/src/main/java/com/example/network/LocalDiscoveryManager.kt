@@ -48,8 +48,9 @@ class LocalDiscoveryManager(private val context: Context) {
             acquireMulticastLock()
 
             val serviceInfo = NsdServiceInfo().apply {
-                // Name format: KidLock-DeviceName-DeviceId
-                serviceName = "KidLock-${deviceName.replace(" ", "_")}-$deviceId"
+                // Name format: KidLock__DeviceName__DeviceId
+                val sanitizedName = deviceName.replace("__", "_").replace(" ", "_")
+                serviceName = "KidLock__${sanitizedName}__$deviceId"
                 serviceType = SERVICE_TYPE
                 setPort(port)
             }
@@ -162,10 +163,19 @@ class LocalDiscoveryManager(private val context: Context) {
 
                 Log.d(TAG, "Resolved service: $rawName at $ip:$port")
 
-                // Parse KidLock-Name-Id
-                val parts = rawName.split("-")
-                val cleanName = if (parts.size >= 2) parts[1].replace("_", " ") else rawName
-                val parsedDeviceId = if (parts.size >= 3) parts[2] else rawName
+                // Parse KidLock__Name__Id or legacy KidLock-Name-Id
+                val cleanName: String
+                val parsedDeviceId: String
+
+                if (rawName.contains("__")) {
+                    val parts = rawName.split("__")
+                    cleanName = if (parts.size >= 2) parts[1].replace("_", " ") else rawName
+                    parsedDeviceId = if (parts.size >= 3) parts[2] else rawName
+                } else {
+                    val parts = rawName.split("-")
+                    cleanName = if (parts.size >= 2) parts[1].replace("_", " ") else rawName
+                    parsedDeviceId = if (parts.size >= 3) parts.drop(2).joinToString("-") else rawName
+                }
 
                 val device = PairedChildDevice(
                     deviceId = parsedDeviceId,
@@ -180,7 +190,7 @@ class LocalDiscoveryManager(private val context: Context) {
 
                 scope.launch {
                     val current = _discoveredDevices.value.toMutableList()
-                    val index = current.indexOfFirst { it.deviceId == device.deviceId }
+                    val index = current.indexOfFirst { it.deviceId == device.deviceId || (it.ipAddress == device.ipAddress && it.ipAddress.isNotEmpty()) }
                     if (index >= 0) {
                         current[index] = device
                     } else {

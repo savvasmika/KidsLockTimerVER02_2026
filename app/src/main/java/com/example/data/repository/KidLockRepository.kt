@@ -120,6 +120,12 @@ class KidLockRepository(
                     }
                     val resolvedPort = if (msg.childPort != 0) msg.childPort else (existing?.port ?: LocalP2PCommunication.SERVER_PORT)
 
+                    // Remove any stale or duplicate placeholder entries with the same IP or name
+                    if (resolvedIp.isNotEmpty() && resolvedIp != "127.0.0.1") {
+                        database.pairedDeviceDao().deleteDuplicatesByIp(resolvedIp, msg.childDeviceId)
+                    }
+                    database.pairedDeviceDao().deleteDuplicatesByName(msg.childName, msg.childDeviceId)
+
                     val newDevice = PairedChildDevice(
                         deviceId = msg.childDeviceId,
                         name = msg.childName,
@@ -234,11 +240,7 @@ class KidLockRepository(
         }
 
         // Try local Wi-Fi first
-        val sent = p2pCommunication.sendMessage(targetDevice.ipAddress, targetDevice.port, payload)
-        if (sent) {
-            database.pairedDeviceDao().insertDevice(targetDevice)
-        }
-        return sent
+        return p2pCommunication.sendMessage(targetDevice.ipAddress, targetDevice.port, payload)
     }
 
     suspend fun acceptChildPairing(request: P2PMessage.PairRequest) {

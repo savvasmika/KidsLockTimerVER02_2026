@@ -149,20 +149,37 @@ fun ChildLockScreen(
                 }
             }
 
-            // Discreet Parent PIN Unlock Button (Only parent can unlock directly on device)
-            IconButton(
-                onClick = { showParentPinDialog = true },
-                modifier = Modifier
-                    .size(42.dp)
-                    .clip(CircleShape)
-                    .background(Color.Black.copy(alpha = 0.4f))
-                    .testTag("btn_parent_unlock_pin")
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Lock,
-                    contentDescription = "Parent Unlock PIN",
-                    tint = Color.White
-                )
+            // Right Actions: Pairing Button & Discreet Parent PIN Unlock Button
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                IconButton(
+                    onClick = onOpenPairing,
+                    modifier = Modifier
+                        .size(42.dp)
+                        .clip(CircleShape)
+                        .background(Color.Black.copy(alpha = 0.4f))
+                        .testTag("btn_child_pairing_settings")
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Settings,
+                        contentDescription = "Pairing Settings",
+                        tint = Color.White
+                    )
+                }
+
+                IconButton(
+                    onClick = { showParentPinDialog = true },
+                    modifier = Modifier
+                        .size(42.dp)
+                        .clip(CircleShape)
+                        .background(Color.Black.copy(alpha = 0.4f))
+                        .testTag("btn_parent_unlock_pin")
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Lock,
+                        contentDescription = "Parent Unlock PIN",
+                        tint = Color.White
+                    )
+                }
             }
         }
 

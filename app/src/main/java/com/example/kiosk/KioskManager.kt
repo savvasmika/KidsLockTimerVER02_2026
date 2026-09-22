@@ -104,9 +104,11 @@ class KioskManager(private val context: Context) {
             val lockTaskState = activityManager?.lockTaskModeState ?: ActivityManager.LOCK_TASK_MODE_NONE
 
             if (lockTaskState == ActivityManager.LOCK_TASK_MODE_NONE) {
-                if (isDeviceOwner() || isLockTaskPermitted()) {
+                try {
                     activity.startLockTask()
-                    Log.d(TAG, "startLockTask() called for Device/Profile Owner")
+                    Log.d(TAG, "startLockTask() initiated successfully")
+                } catch (e: Throwable) {
+                    Log.w(TAG, "startLockTask not permitted or failed: ${e.message}")
                 }
             }
 
